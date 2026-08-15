@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "canvas": { "width": 512, "height": 512 },
+  "body": { "src": "body.png", "x": 0, "y": 0, "width": 512, "height": 512 },
+  "mouth": {
+    "anchor": { "x": 256, "y": 338 },
+    "sprites": {
+      "closed": "mouth-closed.png",
+      "small": "mouth-small.png",
+      "large": "mouth-large.png",
+      "wide": "mouth-wide.png",
+      "round": "mouth-round.png"
+    }
+  },
+  "eyes": {
+    "anchor": { "x": 256, "y": 256 },
+    "sprites": { "open": "eyes-open.png", "closed": "eyes-closed.png" }
+  },
+  "animation": { "bodyBouncePx": 2 }
+}

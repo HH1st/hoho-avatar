@@ -1,0 +1,4 @@
+interface:
+  display_name: "Generate Talking Sprite Character"
+  short_description: "Generate engine-ready talking sprite assets"
+  default_prompt: "Use $generate-talking-sprite-character to create a configurable character asset set and load it in TalkingSprite."

@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#080b14" />
+    <title>PIXEL VOICE // Hoho Avatar</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Space+Grotesk:wght@400;500;600&display=swap" rel="stylesheet" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <header class="topbar">
+        <div class="brand"><span class="brand-dot"></span>PIXEL VOICE</div>
+        <div class="status-pill"><span id="statusDot"></span><span id="statusText">STANDBY</span></div>
+      </header>
+
+      <section class="hero">
+        <div class="copy">
+          <p class="eyebrow">PCM-DRIVEN AVATAR / MVP 01</p>
+          <h1>Your voice.<br /><em>Rendered alive.</em></h1>
+          <p class="lede">Browser microphone audio becomes five crisp mouth states in real time. No transcript, no cloud, no rig.</p>
+          <label class="avatar-picker">
+            <span>AVATAR</span>
+            <select id="avatarSelect">
+              <option value="pixel-bot">PIXEL BOT</option>
+              <option value="pixel-portrait">PIXEL PORTRAIT</option>
+            </select>
+          </label>
+          <div class="controls">
+            <button id="micButton" class="primary"><span class="mic-icon">●</span><span id="buttonLabel">START MIC</span></button>
+            <span class="privacy">Audio stays in this tab</span>
+          </div>
+        </div>
+
+        <div class="stage-wrap">
+          <div class="corner top-left"></div><div class="corner top-right"></div>
+          <div class="corner bottom-left"></div><div class="corner bottom-right"></div>
+          <div class="stage-grid"></div>
+          <canvas id="avatar" width="512" height="512" aria-label="Talking pixel avatar"></canvas>
+          <div class="scanline"></div>
+          <div id="stageLabel" class="stage-label">AVATAR // PIXEL BOT</div>
+        </div>
+      </section>
+
+      <section class="telemetry">
+        <div class="meter-panel">
+          <div class="panel-heading"><span>LIVE INPUT</span><span id="dbValue">−∞ dB</span></div>
+          <div id="bars" class="bars" aria-label="Audio level"></div>
+        </div>
+        <div class="readout">
+          <span class="readout-label">MOUTH STATE</span>
+          <strong id="mouthState">CLOSED</strong>
+          <span id="stateHint">waiting for signal</span>
+        </div>
+        <div class="readout">
+          <span class="readout-label">SAMPLE RATE</span>
+          <strong id="sampleRate">—</strong>
+          <span>mono / float32</span>
+        </div>
+      </section>
+    </main>
+    <script type="module" src="/examples/basic/main.ts"></script>
+  </body>
+</html>

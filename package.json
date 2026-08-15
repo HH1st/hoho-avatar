@@ -1,0 +1,41 @@
+{
+  "name": "@hh1st/hoho-avatar",
+  "version": "0.1.0",
+  "description": "A browser-first toolkit for building audio-reactive avatar experiences.",
+  "author": "HH1st",
+  "license": "MIT",
+  "private": true,
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/HH1st/hoho-avatar.git"
+  },
+  "homepage": "https://github.com/HH1st/hoho-avatar#readme",
+  "bugs": {
+    "url": "https://github.com/HH1st/hoho-avatar/issues"
+  },
+  "keywords": [
+    "avatar",
+    "lip-sync",
+    "canvas",
+    "audio",
+    "typescript"
+  ],
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "engines": {
+    "node": ">=20.19.0"
+  },
+  "overrides": {
+    "nanoid": "3.3.17"
+  },
+  "devDependencies": {
+    "typescript": "^7.0.2",
+    "vite": "^8.2.0",
+    "vitest": "^4.1.10"
+  }
+}
