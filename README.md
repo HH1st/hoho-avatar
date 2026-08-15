@@ -36,6 +36,22 @@ npm run dev
 
 Open the local URL shown by Vite, select a character, press **START MIC**, and grant microphone permission. Microphone access normally requires localhost or a secure HTTPS context.
 
+### Load a custom character
+
+The demo accepts a `.zip` containing one V1 character directory. Select **LOAD AVATAR ZIP** or drop the archive onto the avatar stage; the package is validated, unpacked, and rendered entirely inside the browser.
+
+```text
+my-character.zip
+└── my-character/
+    ├── character.json
+    ├── body.png
+    ├── eyes-open.png
+    ├── eyes-closed.png
+    └── mouth-{closed,small,large,wide,round}.png
+```
+
+Characters produced by the bundled [asset-generation Skill](skills/generate-talking-sprite-character/SKILL.md) follow this layout. Zip the generated character directory before loading it in the demo. The files are not uploaded to a server.
+
 Hoho Avatar is currently source-first and is not published as an npm package. Use the checked-out source directly or adapt the example application for your integration.
 
 ## Engine usage from source

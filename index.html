@@ -21,13 +21,18 @@
           <p class="eyebrow">PCM-DRIVEN AVATAR / MVP 01</p>
           <h1>Your voice.<br /><em>Rendered alive.</em></h1>
           <p class="lede">Browser microphone audio becomes five crisp mouth states in real time. No transcript, no cloud, no rig.</p>
-          <label class="avatar-picker">
-            <span>AVATAR</span>
-            <select id="avatarSelect">
-              <option value="pixel-bot">PIXEL BOT</option>
-              <option value="pixel-portrait">PIXEL PORTRAIT</option>
-            </select>
-          </label>
+          <div class="avatar-tools">
+            <label class="avatar-picker">
+              <span>AVATAR</span>
+              <select id="avatarSelect">
+                <option value="pixel-bot">PIXEL BOT</option>
+                <option value="pixel-portrait">PIXEL PORTRAIT</option>
+              </select>
+            </label>
+            <button id="uploadButton" class="secondary" type="button">LOAD AVATAR ZIP</button>
+            <input id="avatarFile" type="file" accept=".zip,application/zip" hidden />
+            <span id="uploadStatus" class="upload-status" aria-live="polite">Drop a skill-generated character ZIP on the stage</span>
+          </div>
           <div class="controls">
             <button id="micButton" class="primary"><span class="mic-icon">●</span><span id="buttonLabel">START MIC</span></button>
             <span class="privacy">Audio stays in this tab</span>
@@ -40,6 +45,7 @@
           <div class="stage-grid"></div>
           <canvas id="avatar" width="512" height="512" aria-label="Talking pixel avatar"></canvas>
           <div class="scanline"></div>
+          <div class="drop-overlay">DROP CHARACTER ZIP</div>
           <div id="stageLabel" class="stage-label">AVATAR // PIXEL BOT</div>
         </div>
       </section>

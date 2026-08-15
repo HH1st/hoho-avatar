@@ -1,4 +1,6 @@
 import { TalkingSprite } from "../../src";
+import type { CharacterDefinition } from "../../src";
+import { loadCharacterPackage, type LoadedCharacterPackage } from "./characterPackage";
 import "./style.css";
 
 const canvas = document.querySelector<HTMLCanvasElement>("#avatar")!;
@@ -13,6 +15,10 @@ const sampleRateLabel = document.querySelector("#sampleRate")!;
 const bars = document.querySelector("#bars")!;
 const avatarSelect = document.querySelector<HTMLSelectElement>("#avatarSelect")!;
 const stageLabel = document.querySelector("#stageLabel")!;
+const stageWrap = document.querySelector<HTMLElement>(".stage-wrap")!;
+const uploadButton = document.querySelector<HTMLButtonElement>("#uploadButton")!;
+const avatarFile = document.querySelector<HTMLInputElement>("#avatarFile")!;
+const uploadStatus = document.querySelector<HTMLElement>("#uploadStatus")!;
 
 const barElements = Array.from({ length: 32 }, () => {
   const bar = document.createElement("i");
@@ -26,6 +32,7 @@ let audioContext: AudioContext | undefined;
 let processor: ScriptProcessorNode | undefined;
 let source: MediaStreamAudioSourceNode | undefined;
 let sink: GainNode | undefined;
+let customAvatar: LoadedCharacterPackage | undefined;
 
 const avatars = {
   "pixel-bot": {
@@ -37,6 +44,13 @@ const avatars = {
     label: "AVATAR // PIXEL PORTRAIT",
   },
 } as const;
+
+function selectedAvatar(): { character: string | CharacterDefinition; label: string } {
+  if (avatarSelect.value === "custom" && customAvatar) {
+    return { character: customAvatar.definition, label: `AVATAR // ${customAvatar.name.toUpperCase()}` };
+  }
+  return avatars[avatarSelect.value as keyof typeof avatars] ?? avatars["pixel-bot"];
+}
 
 const hints = {
   closed: "waiting for signal",
@@ -54,7 +68,7 @@ function updateMeter(energy: number) {
 }
 
 async function mountSelectedSprite(sampleRate: number, state: "idle" | "listening") {
-  const avatar = avatars[avatarSelect.value as keyof typeof avatars] ?? avatars["pixel-bot"];
+  const avatar = selectedAvatar();
   sprite?.destroy();
   const next = new TalkingSprite(canvas, { character: avatar.character, sampleRate });
   sprite = next;
@@ -71,6 +85,49 @@ async function mountSelectedSprite(sampleRate: number, state: "idle" | "listenin
     stateHint.textContent = hints[frame.mouth];
     updateMeter(frame.energy);
   });
+}
+
+async function importAvatar(file: File) {
+  uploadButton.disabled = true;
+  avatarSelect.disabled = true;
+  uploadStatus.classList.remove("error", "success");
+  uploadStatus.textContent = `Opening ${file.name}…`;
+  let nextAvatar: LoadedCharacterPackage | undefined;
+  try {
+    nextAvatar = await loadCharacterPackage(file);
+    const previousAvatar = customAvatar;
+    customAvatar = nextAvatar;
+    let customOption = avatarSelect.querySelector<HTMLOptionElement>('option[value="custom"]');
+    if (!customOption) {
+      customOption = document.createElement("option");
+      customOption.value = "custom";
+      avatarSelect.append(customOption);
+    }
+    customOption.textContent = `CUSTOM // ${nextAvatar.name.toUpperCase()}`;
+    avatarSelect.value = "custom";
+    try {
+      await mountSelectedSprite(audioContext?.sampleRate ?? 48000, stream ? "listening" : "idle");
+      previousAvatar?.dispose();
+    } catch (error) {
+      customAvatar = previousAvatar;
+      nextAvatar.dispose();
+      if (previousAvatar) customOption.textContent = `CUSTOM // ${previousAvatar.name.toUpperCase()}`;
+      else customOption.remove();
+      avatarSelect.value = previousAvatar ? "custom" : "pixel-bot";
+      await mountSelectedSprite(audioContext?.sampleRate ?? 48000, stream ? "listening" : "idle");
+      throw error;
+    }
+    uploadStatus.textContent = `${nextAvatar.name} loaded locally`;
+    uploadStatus.classList.add("success");
+  } catch (error) {
+    console.error(error);
+    uploadStatus.textContent = error instanceof Error ? error.message : "Unable to load this character ZIP.";
+    uploadStatus.classList.add("error");
+  } finally {
+    uploadButton.disabled = false;
+    avatarSelect.disabled = false;
+    avatarFile.value = "";
+  }
 }
 
 async function startMic() {
@@ -138,5 +195,30 @@ avatarSelect.addEventListener("change", async () => {
     avatarSelect.disabled = false;
   }
 });
+
+uploadButton.addEventListener("click", () => avatarFile.click());
+avatarFile.addEventListener("change", () => {
+  const file = avatarFile.files?.[0];
+  if (file) void importAvatar(file);
+});
+
+for (const eventName of ["dragenter", "dragover"]) {
+  stageWrap.addEventListener(eventName, (event) => {
+    event.preventDefault();
+    stageWrap.classList.add("dragging");
+  });
+}
+for (const eventName of ["dragleave", "drop"]) {
+  stageWrap.addEventListener(eventName, (event) => {
+    event.preventDefault();
+    stageWrap.classList.remove("dragging");
+  });
+}
+stageWrap.addEventListener("drop", (event) => {
+  const file = event.dataTransfer?.files[0];
+  if (file) void importAvatar(file);
+});
+
+window.addEventListener("beforeunload", () => customAvatar?.dispose());
 
 mountSelectedSprite(48000, "idle").catch(console.error);
