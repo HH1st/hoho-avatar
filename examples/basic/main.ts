@@ -29,11 +29,11 @@ let sink: GainNode | undefined;
 
 const avatars = {
   "pixel-bot": {
-    character: "/characters/pixel-bot/character.json",
+    character: `${import.meta.env.BASE_URL}characters/pixel-bot/character.json`,
     label: "AVATAR // PIXEL BOT",
   },
   "pixel-portrait": {
-    character: "/characters/pixel-portrait/character.json",
+    character: `${import.meta.env.BASE_URL}characters/pixel-portrait/character.json`,
     label: "AVATAR // PIXEL PORTRAIT",
   },
 } as const;

@@ -2,6 +2,8 @@
 
 Hoho Avatar is an open-source toolkit for building speaking and audio-reactive avatar experiences across rendering engines.
 
+**[Try the live microphone demo](https://hh1st.github.io/hoho-avatar/)**
+
 The project currently ships a browser-first TypeScript engine that analyzes streaming PCM audio, selects five mouth states, adds automatic blinking, and renders layered PNG characters with Canvas 2D. The engine has no runtime dependencies and performs its audio analysis locally without speech recognition, transcription, or a cloud service.
 
 Support for additional 2D, Live2D, and 3D renderers is a long-term direction, not a feature of the current release.
