@@ -35,7 +35,20 @@
           </div>
           <div class="controls">
             <button id="micButton" class="primary"><span class="mic-icon">●</span><span id="buttonLabel">START MIC</span></button>
+            <button id="audioChooseButton" class="secondary" type="button">CHOOSE AUDIO</button>
+            <input id="audioFile" type="file" accept="audio/*" hidden />
             <span class="privacy">Audio stays in this tab</span>
+          </div>
+          <div class="audio-clip">
+            <div class="audio-clip-info">
+              <span id="audioStatus" aria-live="polite">NO AUDIO SELECTED</span>
+              <span id="audioProgress">00:00 / 00:00</span>
+            </div>
+            <div id="audioTrack" class="audio-track" role="progressbar" aria-label="Audio playback progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="audioTrackFill"></span></div>
+            <div class="audio-actions">
+              <button id="audioPlayButton" class="secondary" type="button" disabled>PLAY</button>
+              <button id="audioStopButton" class="secondary" type="button" disabled>STOP</button>
+            </div>
           </div>
         </div>
 
@@ -53,7 +66,7 @@
       <section class="telemetry">
         <div class="meter-panel">
           <div class="panel-heading"><span>LIVE INPUT</span><span id="dbValue">−∞ dB</span></div>
-          <div id="bars" class="bars" aria-label="Audio level"></div>
+          <div id="bars" class="bars" role="meter" aria-label="Audio level" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"></div>
         </div>
         <div class="readout">
           <span class="readout-label">MOUTH STATE</span>

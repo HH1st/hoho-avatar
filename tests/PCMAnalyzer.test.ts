@@ -13,4 +13,11 @@ describe("PCMAnalyzer", () => {
     const analyzer = new PCMAnalyzer({ sampleRate: 1000, windowMs: 4 });
     expect(analyzer.analyze(new Float32Array(4)).rms).toBe(0);
   });
+
+  it("discards pending samples when reset", () => {
+    const analyzer = new PCMAnalyzer({ sampleRate: 1000, windowMs: 4 });
+    expect(analyzer.push(new Float32Array([1, 1]))).toEqual([]);
+    analyzer.reset();
+    expect(analyzer.push(new Float32Array([1, 1]))).toEqual([]);
+  });
 });

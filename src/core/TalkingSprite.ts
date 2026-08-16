@@ -46,11 +46,16 @@ export class TalkingSprite {
     this.animationFrame = undefined;
   }
 
-  destroy(): void {
-    this.stop();
-    this.listeners.clear();
+  resetAudio(): void {
     this.analyzer.reset();
     this.motion = this.classifier.reset();
+    for (const listener of this.listeners) listener(this.motion);
+  }
+
+  destroy(): void {
+    this.stop();
+    this.resetAudio();
+    this.listeners.clear();
     const context = this.canvas.getContext("2d");
     context?.clearRect(0, 0, this.canvas.width, this.canvas.height);
   }

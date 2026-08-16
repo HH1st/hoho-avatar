@@ -23,4 +23,10 @@ describe("MouthClassifier", () => {
     expect(classifier.update(features(20, 0.4)).mouth).toBe("small");
     expect(classifier.update(features(60, 0.4)).mouth).toBe("large");
   });
+
+  it("resets immediately to a closed mouth", () => {
+    const classifier = new MouthClassifier({ minStateDurationMs: 0 });
+    expect(classifier.update(features(0, 0.4)).mouth).toBe("large");
+    expect(classifier.reset(10)).toEqual({ timestamp: 10, speaking: false, energy: 0, mouth: "closed" });
+  });
 });

@@ -2,9 +2,9 @@
 
 Hoho Avatar is an open-source toolkit for building speaking and audio-reactive avatar experiences across rendering engines.
 
-**[Try the live microphone demo](https://hh1st.github.io/hoho-avatar/)**
+**[Try the live microphone and local audio demo](https://hh1st.github.io/hoho-avatar/)**
 
-The project currently ships a browser-first TypeScript engine that analyzes streaming PCM audio, selects five mouth states, adds automatic blinking, and renders layered PNG characters with Canvas 2D. The engine has no runtime dependencies and performs its audio analysis locally without speech recognition, transcription, or a cloud service.
+The project currently ships a browser-first TypeScript engine that analyzes streaming PCM audio, selects five mouth states, adds automatic blinking, and renders layered PNG characters with Canvas 2D. The demo accepts microphone input or a local audio file. Audio analysis and file decoding stay in the browser without speech recognition, transcription, or a cloud service.
 
 Support for additional 2D, Live2D, and 3D renderers is a long-term direction, not a feature of the current release.
 
@@ -13,7 +13,7 @@ Support for additional 2D, Live2D, and 3D renderers is a long-term direction, no
 | Part | Location | Purpose |
 | --- | --- | --- |
 | Canvas 2D engine | `src/` | PCM analysis, mouth classification, blinking, asset loading, and Canvas rendering |
-| Demo and assets | `examples/basic/`, `public/characters/` | A microphone demo with two engine-ready example characters |
+| Demo and assets | `examples/basic/`, `public/characters/` | Microphone and local-file playback with two engine-ready example characters |
 | Asset Skill | `skills/generate-talking-sprite-character/` | A Codex workflow for generating, validating, previewing, and integrating character assets |
 
 The bundled example characters are:
@@ -34,7 +34,7 @@ npm install
 npm run dev
 ```
 
-Open the local URL shown by Vite, select a character, press **START MIC**, and grant microphone permission. Microphone access normally requires localhost or a secure HTTPS context.
+Open the local URL shown by Vite and select a character. Press **START MIC** and grant microphone permission for live input, or press **CHOOSE AUDIO** to decode and play a local audio file. Microphone access normally requires localhost or a secure HTTPS context.
 
 ### Load a custom character
 
@@ -87,11 +87,47 @@ unsubscribe();
 sprite.destroy();
 ```
 
+### Drive a sprite from a local audio file
+
+`AudioClipPlayer` decodes a complete browser-supported audio file, plays it through Web Audio, and emits mono `Float32Array` PCM chunks for `TalkingSprite`:
+
+```ts
+import { AudioClipPlayer, TalkingSprite } from "../../src";
+
+const canvas = document.querySelector<HTMLCanvasElement>("#avatar")!;
+const file = document.querySelector<HTMLInputElement>("#audioFile")!.files![0]!;
+let sprite: TalkingSprite | undefined;
+
+const player = new AudioClipPlayer({
+  onPCM: (chunk) => sprite?.pushPCM(chunk),
+  onEnded: () => sprite?.resetAudio(),
+});
+
+const metadata = await player.load(file);
+sprite = new TalkingSprite(canvas, {
+  character: "/characters/pixel-bot/character.json",
+  sampleRate: metadata.sampleRate,
+});
+
+await sprite.ready;
+sprite.start();
+await player.play();
+
+// Later:
+player.stop();
+sprite.resetAudio();
+await player.destroy();
+sprite.destroy();
+```
+
+`metadata.sampleRate` is the Web Audio processing rate used by the emitted PCM, so pass it to `TalkingSprite`. Browsers automatically resample source files such as 16 kHz or 24 kHz audio to the `AudioContext` rate. Supported file containers and codecs depend on the browser.
+
 The source entry point exports:
 
 - `TalkingSprite`
 - `PCMAnalyzer`
 - `MouthClassifier`
+- `AudioClipPlayer`
 - TypeScript definitions for character configuration, audio features, mouth states, and motion frames
 
 ## Character asset format
@@ -185,7 +221,7 @@ Image generation also requires an ImageGen capability when a character body does
 ```bash
 npm run dev        # Start the browser demo from source
 npm run typecheck  # Type-check source, examples, and tests
-npm test           # Run deterministic analyzer and classifier tests
+npm test           # Run deterministic engine and audio-player tests
 npm run build      # Build the browser demo
 ```
 
@@ -195,6 +231,7 @@ Project layout:
 src/
 ├── animation/   # Blink timing
 ├── audio/       # PCM feature extraction and mouth classification
+├── audio-source/ # Local-file playback and AudioWorklet PCM output
 ├── core/        # TalkingSprite API and public types
 └── renderer/    # Asset loading and Canvas composition
 
@@ -215,11 +252,11 @@ docs/
 
 ## Privacy and browser support
 
-The engine processes PCM data in the browser. It does not transcribe speech or upload audio. The example application requests microphone access only after the user presses the microphone button.
+The engine processes PCM data in the browser. It does not transcribe speech or upload audio. The example application requests microphone access only after the user presses the microphone button, and selected audio files are decoded locally without being uploaded.
 
 Applications embedding the engine remain responsible for how they acquire, store, or transmit audio outside the engine.
 
-The engine targets modern browsers with Canvas 2D, `fetch`, and `requestAnimationFrame`. The microphone demo additionally requires `getUserMedia`. It currently uses the legacy `ScriptProcessorNode`; production integrations may prefer `AudioWorklet`.
+The engine targets modern browsers with Canvas 2D, `fetch`, and `requestAnimationFrame`. The microphone path additionally requires `getUserMedia` and currently uses the legacy `ScriptProcessorNode`. Local-file playback requires `decodeAudioData` and `AudioWorklet`.
 
 ## Current scope and roadmap
 
@@ -227,11 +264,12 @@ Current release:
 
 - Browser Canvas 2D rendering
 - Mono PCM input
+- Local audio-file playback with mono PCM output
 - Five heuristic mouth states: `closed`, `small`, `large`, `wide`, and `round`
 - Automatic two-state blinking
 - Layered PNG character assets
 
-The current engine is not phoneme-level lip sync, a skeletal animation system, or an audio capture library.
+The current engine is not phoneme-level lip sync, a skeletal animation system, or a general-purpose audio recording library.
 
 Longer term, Hoho Avatar aims to expose shared audio-driven motion data to multiple renderer adapters, including richer 2D, Live2D, and 3D integrations. Those adapters are not yet implemented.
 
