@@ -14,7 +14,7 @@ Find the repository root containing `src/core/TalkingSprite.ts` and `public/char
 - `<repo>`: repository root
 - `<skill>`: this skill directory
 - `<slug>`: lowercase hyphenated character name
-- `<out>`: `<repo>/public/characters/<slug>`
+- `<out>`: `<repo>/working/characters/<slug>` for drafts, private work, or unspecified publication intent; `<repo>/public/characters/<slug>` only when the user explicitly asks to publish or integrate the character into the demo
 
 Do not overwrite an existing character unless the user explicitly requests replacement. Otherwise choose a new slug.
 
@@ -31,6 +31,7 @@ python -m pip install -r "<skill>/requirements.txt"
 Establish:
 
 - source mode: text-only concept, reference-guided generation, or exact-image edit;
+- delivery stage: working-only or explicitly published/demo-integrated;
 - view: front-facing by default, or profile when explicitly requested;
 - speaking subject when an image contains multiple figures;
 - color treatment and distinguishing features;
@@ -39,6 +40,8 @@ Establish:
 For a text-only request, derive a coherent silhouette, face, wardrobe or body treatment, palette, and personality from the user's description. Make tasteful decisions for unspecified details and ask only when a missing choice would materially change the requested character. Do not require the user to supply a reference image.
 
 Ask only when the speaking subject or intended view is genuinely ambiguous.
+
+Default to working-only delivery when publication intent is absent. For working-only assets, do not modify `public/`, the demo selector, `ASSETS.md`, or production output.
 
 ### 2. Generate the body
 
@@ -82,12 +85,16 @@ Record anchor decisions explicitly before generating layers.
 
 ### 5. Generate expression layers
 
+Read [references/expression-art-direction.md](references/expression-art-direction.md) before generating or revising humanoid mouths.
+
 Front-facing pair of eyes:
 
 ```bash
 python "<skill>/scripts/create_pixel_layers.py" \
   --body "<out>/body.png" --out-dir "<out>" \
-  --eyes pair --face-sample 256,320
+  --eyes pair --face-sample 256,320 \
+  --color 5A3328 --lip-color 8F483F --mouth-color 371F20 \
+  --tooth-color EED8B2 --tongue-color B1584E
 ```
 
 One eye for a profile composition:
@@ -112,7 +119,7 @@ mouth-round.png
 
 Use `--eyes none` only when the character intentionally has no blinking.
 
-Treat `create_pixel_layers.py` as a deterministic scaffold, not the final art direction. Customize the generated layers when its generic geometry or darkest-color inference does not belong to the character. In particular:
+Treat `create_pixel_layers.py` as a deterministic scaffold, not the final art direction. Its default humanoid mouths include multiple color regions, but still require composite review and character-specific refinement. Never deliver single-color geometric scaffold mouths for a humanoid unless the visual language is intentionally minimal or mechanical. In particular:
 
 - preserve reference eye details when references exist; for text-only characters, derive eye shape, scale, spacing, eyelid weight, pupil treatment, and symmetry or asymmetry from the generated body;
 - make closed eyes read as the same eyes blinking, including behind glasses; do not cover frames, eyebrows, highlights, or facial contours with obvious rectangular patches;
@@ -120,6 +127,7 @@ Treat `create_pixel_layers.py` as a deterministic scaffold, not the final art di
 - decide whether teeth are visible separately for `small`, `large`, `wide`, and `round`. Follow the reference expression and the chosen visual style: teeth may be absent, partially visible, or stylized, and need not use identical geometry across states;
 - use an off-white sampled or harmonized with the artwork when teeth are shown. Avoid a bright white strip when the rest of the image has muted contrast;
 - keep the five mouth states related as one mouth while allowing state-specific anatomy. Do not force every character into the same lip, tooth, or cavity template.
+- make `closed` carry the reference personality, keep visible corners on `wide`, and make `round` a stepped oval rather than a square frame.
 
 ### 6. Write `character.json`
 
@@ -147,6 +155,7 @@ This produces ten cells for a blinking character and five for a character withou
 
 - all mouth states sit naturally on the intended speaker and share a stable center;
 - `large`, `wide`, and `round` remain legible without reading as detached objects;
+- no humanoid state reads as a single-color sticker, ruler-straight bar, square frame, or generic symbol;
 - eye shape and blink treatment match the source concept or reference rather than looking like generic overlay symbols;
 - closed eyes do not damage glasses, facial features, or the silhouette;
 - teeth appear only where natural for that state and share the artwork's palette, pixel density, and contrast;
@@ -163,7 +172,9 @@ Run:
 python "<skill>/scripts/validate_character.py" "<out>/character.json"
 ```
 
-Then verify the engine load path:
+For working-only delivery, package the required files into `<out>/character.zip` with `character.json` and all referenced PNGs at the ZIP root. Verify the archive and load it through the demo's Custom Avatar uploader. Keep the directory and ZIP under `working/`; do not copy them into `public/`.
+
+For explicitly published delivery, verify the engine load path:
 
 ```ts
 const sprite = new TalkingSprite(canvas, {
@@ -172,15 +183,16 @@ const sprite = new TalkingSprite(canvas, {
 });
 ```
 
-If `examples/basic/main.ts` contains an avatar selector, add the new character unless the user asks for assets only. Preserve all existing characters.
+Only for explicitly published/demo-integrated delivery: if `examples/basic/main.ts` contains an avatar selector, add the new character unless the user asks for assets only. Preserve all existing characters.
 
-Run the repository tests and production build after integration.
+Run the repository tests and production build after code or public integration changes. Working-only asset revisions require asset validation and ZIP verification, not a production build.
 
 ## Completion report
 
 Report:
 
 - saved character directory and configuration path;
+- delivery stage and ZIP path for working-only assets;
 - final generation prompt and whether ImageGen or a fallback was used;
 - view, anchors, color/grid choices, and bounce setting;
 - state-matrix review, validator, test, and build results;
