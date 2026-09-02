@@ -45,6 +45,10 @@ let clipPlayer: AudioClipPlayer | undefined;
 let clipMetadata: AudioClipMetadata | undefined;
 
 const avatars = {
+  "niu-lai": {
+    character: `${import.meta.env.BASE_URL}characters/niu-lai/character.json`,
+    label: "AVATAR // NIU LAI",
+  },
   "pixel-bot": {
     character: `${import.meta.env.BASE_URL}characters/pixel-bot/character.json`,
     label: "AVATAR // PIXEL BOT",
@@ -59,7 +63,7 @@ function selectedAvatar(): { character: string | CharacterDefinition; label: str
   if (avatarSelect.value === "custom" && customAvatar) {
     return { character: customAvatar.definition, label: `AVATAR // ${customAvatar.name.toUpperCase()}` };
   }
-  return avatars[avatarSelect.value as keyof typeof avatars] ?? avatars["pixel-bot"];
+  return avatars[avatarSelect.value as keyof typeof avatars] ?? avatars["niu-lai"];
 }
 
 const hints = {
@@ -215,7 +219,7 @@ async function importAvatar(file: File) {
       nextAvatar.dispose();
       if (previousAvatar) customOption.textContent = `CUSTOM // ${previousAvatar.name.toUpperCase()}`;
       else customOption.remove();
-      avatarSelect.value = previousAvatar ? "custom" : "pixel-bot";
+      avatarSelect.value = previousAvatar ? "custom" : "niu-lai";
       const state: CharacterState = stream ? "listening" : clipPlayer?.state === "playing" ? "speaking" : "idle";
       await mountSelectedSprite(audioContext?.sampleRate ?? clipMetadata?.sampleRate ?? 48000, state);
       throw error;

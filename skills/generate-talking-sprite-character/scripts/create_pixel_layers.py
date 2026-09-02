@@ -89,13 +89,13 @@ def make_mouths(out_dir: Path, outline, lip, cavity, teeth, tongue):
     save("round", image)
 
 
-def make_eyes(out_dir: Path, layout: str, face_color, eye_color):
+def make_eyes(out_dir: Path, layout: str, face_color, eye_color, wide_covers=False):
     if layout == "none":
         return
     if layout == "pair":
         size, output_size = (32, 10), (256, 80)
-        covers = ((5, 2, 11, 8), (21, 2, 27, 8))
-        lines = ((6, 5, 10, 5), (22, 5, 26, 5))
+        covers = ((2, 2, 12, 8), (20, 2, 30, 8)) if wide_covers else ((5, 2, 11, 8), (21, 2, 27, 8))
+        lines = ((4, 5, 10, 5), (22, 5, 28, 5)) if wide_covers else ((6, 5, 10, 5), (22, 5, 26, 5))
     else:
         size, output_size = (16, 8), (128, 64)
         covers = ((5, 2, 12, 6),)
@@ -122,6 +122,7 @@ def main():
     parser.add_argument("--mouth-color", type=hex_color, help="mouth-interior color")
     parser.add_argument("--tooth-color", type=hex_color)
     parser.add_argument("--tongue-color", type=hex_color)
+    parser.add_argument("--wide-eye-covers", action="store_true", help="use wider blink patches for broad-set eyes")
     args = parser.parse_args()
 
     body = Image.open(args.body).convert("RGB")
@@ -146,7 +147,7 @@ def main():
         rgba(tooth_color),
         rgba(tongue_color),
     )
-    make_eyes(args.out_dir, args.eyes, face_color, color)
+    make_eyes(args.out_dir, args.eyes, face_color, color, args.wide_eye_covers)
     print(
         f"layers={args.out_dir} outline={color} lip={lip_color} mouth={mouth_color} "
         f"teeth={tooth_color} tongue={tongue_color} face={face_color} eyes={args.eyes}"

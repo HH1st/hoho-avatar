@@ -13,12 +13,13 @@ Support for additional 2D, Live2D, and 3D renderers is a long-term direction, no
 | Part | Location | Purpose |
 | --- | --- | --- |
 | Canvas 2D engine | `src/` | PCM analysis, mouth classification, blinking, asset loading, and Canvas rendering |
-| Demo and assets | `examples/basic/`, `public/characters/` | Microphone and local-file playback with two engine-ready example characters |
+| Demo and assets | `examples/basic/`, `public/characters/` | Microphone and local-file playback with three engine-ready example characters |
 | Asset Skill | `skills/generate-talking-sprite-character/` | A Codex workflow for generating, validating, previewing, and integrating character assets |
 
 The bundled example characters are:
 
-- `pixel-bot` — the default retro robot character.
+- `niu-lai` — the default reference-guided orange bovine character.
+- `pixel-bot` — the retro robot character.
 - `pixel-portrait` — a front-facing pixel-art portrait.
 
 See [ASSETS.md](ASSETS.md) for their licensing and provenance notes.
@@ -64,7 +65,7 @@ import { TalkingSprite } from "../../src";
 const canvas = document.querySelector<HTMLCanvasElement>("#avatar")!;
 
 const sprite = new TalkingSprite(canvas, {
-  character: "/characters/pixel-bot/character.json",
+  character: "/characters/niu-lai/character.json",
   sampleRate: 48_000,
 });
 
@@ -105,7 +106,7 @@ const player = new AudioClipPlayer({
 
 const metadata = await player.load(file);
 sprite = new TalkingSprite(canvas, {
-  character: "/characters/pixel-bot/character.json",
+  character: "/characters/niu-lai/character.json",
   sampleRate: metadata.sampleRate,
 });
 
@@ -237,6 +238,7 @@ src/
 
 examples/basic/  # Browser microphone demo
 public/characters/
+├── niu-lai/
 ├── pixel-bot/
 └── pixel-portrait/
 
