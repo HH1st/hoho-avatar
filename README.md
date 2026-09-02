@@ -4,6 +4,10 @@ Hoho Avatar is an open-source toolkit for building speaking and audio-reactive a
 
 **[Try the live microphone and local audio demo](https://hh1st.github.io/hoho-avatar/)**
 
+![Hoho Avatar demo with Niu Lai as the default talking character](docs/images/niu-lai-demo.png)
+
+_The browser demo with Niu Lai loaded as the default audio-reactive avatar._
+
 The project currently ships a browser-first TypeScript engine that analyzes streaming PCM audio, selects five mouth states, adds automatic blinking, and renders layered PNG characters with Canvas 2D. The demo accepts microphone input or a local audio file. Audio analysis and file decoding stay in the browser without speech recognition, transcription, or a cloud service.
 
 Support for additional 2D, Live2D, and 3D renderers is a long-term direction, not a feature of the current release.
