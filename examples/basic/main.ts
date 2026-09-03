@@ -54,27 +54,41 @@ let clipMetadata: AudioClipMetadata | undefined;
 let ttsPlayer: StreamingTTSPlayer | undefined;
 let ttsPlaybackStarted = false;
 let kittenModule: Promise<typeof import("kitten-tts-webgpu")> | undefined;
+let ttsTextEdited = false;
 
 const avatars = {
   "niu-lai": {
     character: `${import.meta.env.BASE_URL}characters/niu-lai/character.json`,
     label: "AVATAR // NIU LAI",
+    defaultText: "Hey, I'm Niu Lai. How's your day so far?",
   },
   "pixel-bot": {
     character: `${import.meta.env.BASE_URL}characters/pixel-bot/character.json`,
     label: "AVATAR // PIXEL BOT",
+    defaultText: "Hey, I'm Pixel Bot. What's been the best part of your day?",
   },
   "pixel-portrait": {
     character: `${import.meta.env.BASE_URL}characters/pixel-portrait/character.json`,
     label: "AVATAR // PIXEL PORTRAIT",
+    defaultText: "Hey there. How's your day treating you?",
   },
 } as const;
 
-function selectedAvatar(): { character: string | CharacterDefinition; label: string } {
+function selectedAvatar(): { character: string | CharacterDefinition; label: string; defaultText: string } {
   if (avatarSelect.value === "custom" && customAvatar) {
-    return { character: customAvatar.definition, label: `AVATAR // ${customAvatar.name.toUpperCase()}` };
+    return {
+      character: customAvatar.definition,
+      label: `AVATAR // ${customAvatar.name.toUpperCase()}`,
+      defaultText: `Hey, I'm ${customAvatar.name}. How's your day so far?`,
+    };
   }
   return avatars[avatarSelect.value as keyof typeof avatars] ?? avatars["niu-lai"];
+}
+
+function syncDefaultTTSText() {
+  if (ttsTextEdited) return;
+  ttsText.value = selectedAvatar().defaultText;
+  updateTTSControls();
 }
 
 const hints = {
@@ -358,6 +372,7 @@ async function importAvatar(file: File) {
     try {
       const state: CharacterState = stream ? "listening" : clipPlayer?.state === "playing" ? "speaking" : "idle";
       await mountSelectedSprite(audioContext?.sampleRate ?? clipMetadata?.sampleRate ?? 48000, state);
+      syncDefaultTTSText();
       previousAvatar?.dispose();
     } catch (error) {
       customAvatar = previousAvatar;
@@ -446,6 +461,7 @@ avatarSelect.addEventListener("change", async () => {
   try {
     const state: CharacterState = stream ? "listening" : clipPlayer?.state === "playing" || ttsPlayer?.state === "playing" ? "speaking" : "idle";
     await mountSelectedSprite(audioContext?.sampleRate ?? clipMetadata?.sampleRate ?? 48000, state);
+    syncDefaultTTSText();
   } finally {
     avatarSelect.disabled = false;
   }
@@ -476,7 +492,10 @@ audioPlayButton.addEventListener("click", async () => {
   }
 });
 audioStopButton.addEventListener("click", stopAudioClip);
-ttsText.addEventListener("input", updateTTSControls);
+ttsText.addEventListener("input", () => {
+  ttsTextEdited = true;
+  updateTTSControls();
+});
 ttsSpeakButton.addEventListener("click", async () => {
   try {
     await speakTTS();
