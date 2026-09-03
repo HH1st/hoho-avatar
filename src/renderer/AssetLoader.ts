@@ -1,9 +1,10 @@
-import type { CharacterDefinition } from "../core/types";
+import { parseCharacterDefinition } from "../core/CharacterDefinition";
+import type { CharacterDefinition, MouthState } from "../core/types";
 
 export interface LoadedCharacter {
   definition: CharacterDefinition;
   body: HTMLImageElement;
-  mouths: Record<string, HTMLImageElement>;
+  mouths: Record<MouthState, HTMLImageElement>;
   eyes?: Record<"open" | "closed", HTMLImageElement>;
 }
 
@@ -22,22 +23,29 @@ export async function loadCharacter(source: string | CharacterDefinition): Promi
     const configUrl = new URL(source, document.baseURI);
     const response = await fetch(configUrl);
     if (!response.ok) throw new Error(`Unable to load character: ${response.status}`);
-    definition = await response.json() as CharacterDefinition;
+    definition = parseCharacterDefinition(await response.json());
     baseUrl = configUrl.href;
   } else {
-    definition = source;
+    definition = parseCharacterDefinition(source);
   }
 
   const resolve = (path: string) => new URL(path, baseUrl).href;
-  const mouthEntries = await Promise.all(Object.entries(definition.mouth.sprites).map(async ([key, path]) => [key, await loadImage(resolve(path))] as const));
-  const eyes = definition.eyes
-    ? Object.fromEntries(await Promise.all(Object.entries(definition.eyes.sprites).map(async ([key, path]) => [key, await loadImage(resolve(path))]))) as Record<"open" | "closed", HTMLImageElement>
+  const mouthPromise = Promise.all(
+    Object.entries(definition.mouth.sprites).map(async ([key, path]) => [key, await loadImage(resolve(path))] as const),
+  );
+  const eyesPromise = definition.eyes
+    ? Promise.all(Object.entries(definition.eyes.sprites).map(async ([key, path]) => [key, await loadImage(resolve(path))] as const))
     : undefined;
+  const [body, mouthEntries, eyeEntries] = await Promise.all([
+    loadImage(resolve(definition.body.src)),
+    mouthPromise,
+    eyesPromise,
+  ]);
 
   return {
     definition,
-    body: await loadImage(resolve(definition.body.src)),
-    mouths: Object.fromEntries(mouthEntries),
-    eyes,
+    body,
+    mouths: Object.fromEntries(mouthEntries) as Record<MouthState, HTMLImageElement>,
+    eyes: eyeEntries ? Object.fromEntries(eyeEntries) as Record<"open" | "closed", HTMLImageElement> : undefined,
   };
 }

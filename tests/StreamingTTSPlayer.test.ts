@@ -162,4 +162,21 @@ describe("StreamingTTSPlayer", () => {
     expect(states).toContain("stopping");
     await player.destroy();
   });
+
+  it("publishes synthesis failures through both state and error callbacks", async () => {
+    const states: string[] = [];
+    const onError = vi.fn();
+    const player = new StreamingTTSPlayer({
+      synthesize: async () => { throw new Error("synthesis failed"); },
+      onPCM: vi.fn(),
+      onError,
+      onStateChange: (state) => states.push(state),
+    });
+
+    player.speak("This request fails during synthesis.");
+    await vi.waitFor(() => expect(player.state).toBe("error"));
+    expect(states).toEqual(["synthesizing", "error"]);
+    expect(onError).toHaveBeenCalledOnce();
+    await player.destroy();
+  });
 });

@@ -1,4 +1,5 @@
 export { TalkingSprite } from "./core/TalkingSprite";
+export { parseCharacterDefinition } from "./core/CharacterDefinition";
 export { PCMAnalyzer } from "./audio/PCMAnalyzer";
 export { MouthClassifier } from "./audio/MouthClassifier";
 export { AudioClipPlayer } from "./audio-source/AudioClipPlayer";

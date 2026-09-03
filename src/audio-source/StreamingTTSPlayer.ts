@@ -218,7 +218,7 @@ export class StreamingTTSPlayer {
       }
     } catch (error) {
       if (generation !== this.generation) return;
-      this.currentState = "error";
+      this.setState("error");
       this.textQueue.length = 0;
       this.audioQueue.length = 0;
       this.endRequested = false;

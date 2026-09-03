@@ -20,4 +20,10 @@ describe("PCMAnalyzer", () => {
     analyzer.reset();
     expect(analyzer.push(new Float32Array([1, 1]))).toEqual([]);
   });
+
+  it("assigns increasing timestamps to multiple windows from one chunk", () => {
+    const analyzer = new PCMAnalyzer({ sampleRate: 1000, windowMs: 2 });
+    const frames = analyzer.push(new Float32Array(6), 10);
+    expect(frames.map((frame) => frame.timestamp)).toEqual([10, 12, 14]);
+  });
 });

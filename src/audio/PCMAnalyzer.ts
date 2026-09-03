@@ -8,22 +8,26 @@ export interface PCMAnalyzerOptions {
 export class PCMAnalyzer {
   readonly sampleRate: number;
   readonly windowSize: number;
-  private pending: number[] = [];
+  private readonly pending: Float32Array;
+  private pendingLength = 0;
 
   constructor({ sampleRate, windowMs = 30 }: PCMAnalyzerOptions) {
     if (sampleRate <= 0) throw new Error("sampleRate must be positive");
     this.sampleRate = sampleRate;
     this.windowSize = Math.max(1, Math.round((sampleRate * windowMs) / 1000));
+    this.pending = new Float32Array(this.windowSize);
   }
 
   push(data: Int16Array | Float32Array, timestamp = performance.now()): AudioFeatures[] {
     const result: AudioFeatures[] = [];
     for (let i = 0; i < data.length; i += 1) {
       const raw = data[i] ?? 0;
-      this.pending.push(data instanceof Int16Array ? raw / 32768 : Math.max(-1, Math.min(1, raw)));
-      if (this.pending.length === this.windowSize) {
-        result.push(this.analyze(this.pending, timestamp));
-        this.pending.length = 0;
+      this.pending[this.pendingLength] = data instanceof Int16Array ? raw / 32768 : Math.max(-1, Math.min(1, raw));
+      this.pendingLength += 1;
+      if (this.pendingLength === this.windowSize) {
+        const windowTimestamp = timestamp + result.length * (this.windowSize / this.sampleRate) * 1000;
+        result.push(this.analyze(this.pending, windowTimestamp));
+        this.pendingLength = 0;
       }
     }
     return result;
@@ -56,6 +60,6 @@ export class PCMAnalyzer {
   }
 
   reset(): void {
-    this.pending.length = 0;
+    this.pendingLength = 0;
   }
 }

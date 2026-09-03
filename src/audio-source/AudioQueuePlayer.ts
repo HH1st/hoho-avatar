@@ -23,6 +23,7 @@ export class AudioQueuePlayer {
   private ending = false;
   private destroyed = false;
   private pendingAppends = 0;
+  private appendTail: Promise<void> = Promise.resolve();
 
   constructor(private readonly options: AudioQueuePlayerOptions) {}
 
@@ -39,43 +40,50 @@ export class AudioQueuePlayer {
     this.assertActive();
     const generation = this.generation;
     this.pendingAppends += 1;
+    const operation = this.appendTail.then(() => this.appendInOrder(input, generation));
+    this.appendTail = operation.then(() => undefined, () => undefined);
     try {
-      const encoded = input instanceof ArrayBuffer ? input.slice(0) : await input.arrayBuffer();
-      const buffer = await this.context.decodeAudioData(encoded);
-      await this.prepare();
-      if (generation !== this.generation) throw new DOMException("Audio append was cancelled", "AbortError");
-
-      const metadata: AudioClipMetadata = {
-        duration: buffer.duration,
-        sampleRate: buffer.sampleRate,
-        channels: buffer.numberOfChannels,
-      };
-      if (!this.started) {
-        await this.options.onPlaybackStart?.(metadata);
-        if (generation !== this.generation) throw new DOMException("Audio append was cancelled", "AbortError");
-        this.started = true;
-      }
-
-      const source = this.context.createBufferSource();
-      source.buffer = buffer;
-      source.connect(this.worklet!);
-      const startAt = Math.max(this.nextStartTime, this.context.currentTime + 0.02);
-      this.nextStartTime = startAt + buffer.duration;
-      this.sources.add(source);
-      source.onended = () => {
-        if (generation !== this.generation) return;
-        source.disconnect();
-        this.sources.delete(source);
-        this.finishIfDrained();
-      };
-      source.start(startAt);
-      return metadata;
+      return await operation;
     } finally {
       if (generation === this.generation) {
         this.pendingAppends -= 1;
         this.finishIfDrained();
       }
     }
+  }
+
+  private async appendInOrder(input: Blob | ArrayBuffer, generation: number): Promise<AudioClipMetadata> {
+    if (generation !== this.generation) throw new DOMException("Audio append was cancelled", "AbortError");
+    const encoded = input instanceof ArrayBuffer ? input.slice(0) : await input.arrayBuffer();
+    const buffer = await this.context.decodeAudioData(encoded);
+    await this.prepare();
+    if (generation !== this.generation) throw new DOMException("Audio append was cancelled", "AbortError");
+
+    const metadata: AudioClipMetadata = {
+      duration: buffer.duration,
+      sampleRate: buffer.sampleRate,
+      channels: buffer.numberOfChannels,
+    };
+    if (!this.started) {
+      await this.options.onPlaybackStart?.(metadata);
+      if (generation !== this.generation) throw new DOMException("Audio append was cancelled", "AbortError");
+      this.started = true;
+    }
+
+    const source = this.context.createBufferSource();
+    source.buffer = buffer;
+    source.connect(this.worklet!);
+    const startAt = Math.max(this.nextStartTime, this.context.currentTime + 0.02);
+    this.nextStartTime = startAt + buffer.duration;
+    this.sources.add(source);
+    source.onended = () => {
+      if (generation !== this.generation) return;
+      source.disconnect();
+      this.sources.delete(source);
+      this.finishIfDrained();
+    };
+    source.start(startAt);
+    return metadata;
   }
 
   finish(): void {
@@ -87,6 +95,7 @@ export class AudioQueuePlayer {
   stop(): void {
     this.assertActive();
     ++this.generation;
+    this.appendTail = Promise.resolve();
     for (const source of this.sources) {
       source.onended = null;
       try {

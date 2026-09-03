@@ -1,4 +1,5 @@
 import { strFromU8, unzipSync } from "fflate";
+import { parseCharacterDefinition } from "../../src";
 import type { CharacterDefinition, MouthState } from "../../src";
 
 const MAX_ZIP_BYTES = 25 * 1024 * 1024;
@@ -26,38 +27,6 @@ const browserObjectUrls: ObjectUrlApi = {
   create: (blob) => URL.createObjectURL(blob),
   revoke: (url) => URL.revokeObjectURL(url),
 };
-
-const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === "object" && value !== null;
-const isFiniteNumber = (value: unknown): value is number => typeof value === "number" && Number.isFinite(value);
-const isNonEmptyString = (value: unknown): value is string => typeof value === "string" && value.trim().length > 0;
-
-function requirePoint(value: unknown, label: string): asserts value is { x: number; y: number } {
-  if (!isRecord(value) || !isFiniteNumber(value.x) || !isFiniteNumber(value.y)) {
-    throw new Error(`${label} must contain numeric x and y values.`);
-  }
-}
-
-function parseDefinition(value: unknown): CharacterDefinition {
-  if (!isRecord(value) || value.version !== 1) throw new Error("character.json must use version 1.");
-  if (!isRecord(value.canvas) || !isFiniteNumber(value.canvas.width) || !isFiniteNumber(value.canvas.height) || value.canvas.width <= 0 || value.canvas.height <= 0) {
-    throw new Error("character.json must define a positive canvas width and height.");
-  }
-  if (!isRecord(value.body) || !isNonEmptyString(value.body.src)) throw new Error("character.json is missing body.src.");
-  if (!isRecord(value.mouth)) throw new Error("character.json is missing mouth settings.");
-  requirePoint(value.mouth.anchor, "mouth.anchor");
-  if (!isRecord(value.mouth.sprites)) throw new Error("character.json is missing mouth sprites.");
-  for (const state of mouthStates) {
-    if (!isNonEmptyString(value.mouth.sprites[state])) throw new Error(`character.json is missing mouth sprite: ${state}.`);
-  }
-  if (value.eyes !== undefined) {
-    if (!isRecord(value.eyes)) throw new Error("eyes must be an object.");
-    requirePoint(value.eyes.anchor, "eyes.anchor");
-    if (!isRecord(value.eyes.sprites) || !isNonEmptyString(value.eyes.sprites.open) || !isNonEmptyString(value.eyes.sprites.closed)) {
-      throw new Error("eyes.sprites must contain open and closed images.");
-    }
-  }
-  return value as unknown as CharacterDefinition;
-}
 
 function normalizeZipPath(path: string): string {
   const parts: string[] = [];
@@ -114,7 +83,7 @@ export async function loadCharacterPackage(file: PackageFile, objectUrls: Object
 
   let definition: CharacterDefinition;
   try {
-    definition = parseDefinition(JSON.parse(strFromU8(files.get(configPath)!)) as unknown);
+    definition = parseCharacterDefinition(JSON.parse(strFromU8(files.get(configPath)!)) as unknown);
   } catch (error) {
     if (error instanceof SyntaxError) throw new Error("character.json is not valid JSON.");
     throw error;

@@ -187,7 +187,9 @@ The source entry point exports:
 - `PCMAnalyzer`
 - `MouthClassifier`
 - `AudioClipPlayer`
+- `AudioQueuePlayer`
 - `StreamingTTSPlayer` and `takeTTSChunks`
+- `parseCharacterDefinition` for validating untrusted character JSON
 - TypeScript definitions for character configuration, audio features, mouth states, and motion frames
 
 ## Character asset format
@@ -310,6 +312,24 @@ skills/generate-talking-sprite-character/
 docs/
 └── BACKLOG.md      # Deferred packaging and renderer work
 ```
+
+### Architecture
+
+The engine keeps media acquisition, motion analysis, and drawing as separate stages:
+
+```text
+microphone / audio file / TTS
+              |
+              v
+        mono Float32 PCM
+              |
+              v
+ PCMAnalyzer -> MouthClassifier -> TalkingSprite -> SpriteRenderer
+                                      |
+                               BlinkController
+```
+
+`audio-source/` owns browser playback and emits PCM without depending on avatar rendering. `audio/` is DOM-independent signal processing. `core/` defines the public orchestration and validated character model, while `renderer/` owns Canvas and image loading. Keep new integrations on these boundaries: audio providers should emit PCM, classifiers should emit `MotionFrame`, and renderers should consume motion rather than control playback.
 
 ## Privacy and browser support
 
