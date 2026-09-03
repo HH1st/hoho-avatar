@@ -52,6 +52,32 @@
               <button id="audioStopButton" class="secondary" type="button" disabled>STOP</button>
             </div>
           </div>
+          <div class="tts-panel">
+            <div class="tts-heading"><span>LOCAL TTS // KITTEN</span><span id="ttsStatus" aria-live="polite">ENGLISH / WEBGPU</span></div>
+            <textarea id="ttsText" rows="3" maxlength="500" placeholder="Type English text for the avatar to speak…">Hello! I can generate speech locally, right here in your browser.</textarea>
+            <div class="tts-options">
+              <label>VOICE
+                <select id="ttsVoice">
+                  <option>Bella</option><option>Luna</option><option>Rosie</option><option>Kiki</option>
+                  <option>Jasper</option><option>Bruno</option><option>Hugo</option><option>Leo</option>
+                </select>
+              </label>
+              <label>SPEED
+                <select id="ttsSpeed">
+                  <option value="0.8">0.8×</option><option value="1" selected>1.0×</option>
+                  <option value="1.2">1.2×</option><option value="1.5">1.5×</option>
+                </select>
+              </label>
+              <label>MODE
+                <select id="ttsMode">
+                  <option value="smooth" selected>SMOOTH</option>
+                  <option value="stream">FAST START</option>
+                </select>
+              </label>
+              <button id="ttsSpeakButton" class="secondary sample-button" type="button">SPEAK</button>
+              <button id="ttsStopButton" class="secondary" type="button" disabled>STOP</button>
+            </div>
+          </div>
         </div>
 
         <div class="stage-wrap">

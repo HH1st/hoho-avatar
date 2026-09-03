@@ -31,7 +31,8 @@
     "node": ">=20.19.0"
   },
   "dependencies": {
-    "fflate": "^0.8.2"
+    "fflate": "^0.8.2",
+    "kitten-tts-webgpu": "^0.1.1"
   },
   "overrides": {
     "nanoid": "3.3.18"

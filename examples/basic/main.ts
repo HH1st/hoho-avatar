@@ -1,4 +1,4 @@
-import { AudioClipPlayer, TalkingSprite } from "../../src";
+import { AudioClipPlayer, StreamingTTSPlayer, TalkingSprite } from "../../src";
 import type { AudioClipMetadata, CharacterDefinition, CharacterState } from "../../src";
 import { loadCharacterPackage, type LoadedCharacterPackage } from "./characterPackage";
 import "./style.css";
@@ -28,6 +28,13 @@ const audioStatus = document.querySelector<HTMLElement>("#audioStatus")!;
 const audioProgress = document.querySelector<HTMLElement>("#audioProgress")!;
 const audioTrack = document.querySelector<HTMLElement>("#audioTrack")!;
 const audioTrackFill = document.querySelector<HTMLElement>("#audioTrackFill")!;
+const ttsText = document.querySelector<HTMLTextAreaElement>("#ttsText")!;
+const ttsVoice = document.querySelector<HTMLSelectElement>("#ttsVoice")!;
+const ttsSpeed = document.querySelector<HTMLSelectElement>("#ttsSpeed")!;
+const ttsMode = document.querySelector<HTMLSelectElement>("#ttsMode")!;
+const ttsSpeakButton = document.querySelector<HTMLButtonElement>("#ttsSpeakButton")!;
+const ttsStopButton = document.querySelector<HTMLButtonElement>("#ttsStopButton")!;
+const ttsStatus = document.querySelector<HTMLElement>("#ttsStatus")!;
 
 const barElements = Array.from({ length: 32 }, () => {
   const bar = document.createElement("i");
@@ -44,6 +51,9 @@ let sink: GainNode | undefined;
 let customAvatar: LoadedCharacterPackage | undefined;
 let clipPlayer: AudioClipPlayer | undefined;
 let clipMetadata: AudioClipMetadata | undefined;
+let ttsPlayer: StreamingTTSPlayer | undefined;
+let ttsPlaybackStarted = false;
+let kittenModule: Promise<typeof import("kitten-tts-webgpu")> | undefined;
 
 const avatars = {
   "niu-lai": {
@@ -148,8 +158,121 @@ function stopAudioClip() {
   updateClipControls();
 }
 
+function updateTTSControls() {
+  const state = ttsPlayer?.state ?? "idle";
+  const busy = state === "synthesizing" || state === "playing" || state === "stopping";
+  ttsSpeakButton.disabled = busy || !ttsText.value.trim();
+  ttsStopButton.disabled = state !== "synthesizing" && state !== "playing";
+  ttsText.disabled = busy;
+  ttsVoice.disabled = busy;
+  ttsSpeed.disabled = busy;
+  ttsMode.disabled = busy;
+}
+
+function ensureTTSPlayer(): StreamingTTSPlayer {
+  ttsPlayer ??= new StreamingTTSPlayer({
+    synthesize: async (text, options) => {
+      kittenModule ??= import("kitten-tts-webgpu");
+      const { textToSpeech } = await kittenModule;
+      return textToSpeech(text, {
+        model: "nano",
+        voice: ttsVoice.value,
+        speed: Number(ttsSpeed.value),
+        onProgress: options.onProgress,
+      });
+    },
+    onPCM: (chunk) => sprite?.pushPCM(chunk),
+    minChunkCharacters: 24,
+    maxChunkCharacters: 64,
+    prebufferChunks: 1,
+    onStateChange: (state) => {
+      if (state === "stopping") {
+        ttsStatus.textContent = "STOPPING GPU SYNTHESIS…";
+        statusText.textContent = "TTS STOPPING";
+        statusDot.classList.remove("live");
+      } else if (state === "idle" && statusText.textContent === "TTS STOPPING") {
+        ttsStatus.textContent = "READY // ENGLISH / WEBGPU";
+        statusText.textContent = clipMetadata ? "CLIP READY" : "STANDBY";
+      }
+      updateTTSControls();
+    },
+    onProgress: (stage) => {
+      if (ttsPlayer?.state === "stopping") return;
+      ttsStatus.textContent = stage.toUpperCase();
+    },
+    onPlaybackStart: async (metadata) => {
+      if (!ttsPlaybackStarted) {
+        ttsPlaybackStarted = true;
+        await mountSelectedSprite(metadata.sampleRate, "speaking");
+        sampleRateLabel.textContent = `${(metadata.sampleRate / 1000).toFixed(1)} kHz`;
+      }
+      ttsStatus.textContent = `STREAMING // ${ttsVoice.value.toUpperCase()}`;
+      statusText.textContent = "TTS LIVE";
+      statusDot.classList.add("live");
+      updateTTSControls();
+    },
+    onEnded: () => {
+      sprite?.resetAudio();
+      ttsPlaybackStarted = false;
+      ttsStatus.textContent = "READY // ENGLISH / WEBGPU";
+      statusText.textContent = "STANDBY";
+      statusDot.classList.remove("live");
+      updateTTSControls();
+    },
+    onError: (error) => {
+      console.error(error);
+      sprite?.resetAudio();
+      ttsPlaybackStarted = false;
+      ttsStatus.textContent = error instanceof Error ? error.message.toUpperCase() : "TTS FAILED";
+      statusText.textContent = "TTS ERROR";
+      statusDot.classList.remove("live");
+      updateTTSControls();
+    },
+  });
+  return ttsPlayer;
+}
+
+function stopTTS() {
+  if (ttsPlayer && ttsPlayer.state !== "idle" && ttsPlayer.state !== "destroyed") ttsPlayer.stop();
+  ttsPlaybackStarted = false;
+  sprite?.resetAudio();
+  const stopping = ttsPlayer?.state === "stopping";
+  ttsStatus.textContent = stopping ? "STOPPING GPU SYNTHESIS…" : "READY // ENGLISH / WEBGPU";
+  if (!stream && clipPlayer?.state !== "playing") {
+    statusText.textContent = stopping ? "TTS STOPPING" : clipMetadata ? "CLIP READY" : "STANDBY";
+    statusDot.classList.remove("live");
+  }
+  updateTTSControls();
+}
+
+async function speakTTS() {
+  const text = ttsText.value.trim();
+  if (!text) return;
+  if (!("gpu" in navigator)) {
+    ttsStatus.textContent = "WEBGPU IS NOT AVAILABLE";
+    statusText.textContent = "TTS UNSUPPORTED";
+    return;
+  }
+  if (stream) await stopMic();
+  stopAudioClip();
+  const player = ensureTTSPlayer();
+  await player.prepare();
+  ttsPlaybackStarted = false;
+  ttsStatus.textContent = "STARTING KITTEN TTS…";
+  statusText.textContent = "TTS LOADING";
+  statusDot.classList.remove("live");
+  if (ttsMode.value === "smooth") {
+    ttsStatus.textContent = "GENERATING COMPLETE AUDIO…";
+    player.speakComplete(text);
+  } else {
+    player.speak(text);
+  }
+  updateTTSControls();
+}
+
 async function loadAudioClip(file: File) {
   if (stream) await stopMic();
+  stopTTS();
   stopAudioClip();
   const player = ensureClipPlayer();
   audioStatus.textContent = `DECODING ${file.name}`;
@@ -186,6 +309,7 @@ async function loadAudioClip(file: File) {
 async function playAudioClip() {
   if (!clipMetadata) return;
   if (stream) await stopMic();
+  stopTTS();
   await mountSelectedSprite(clipMetadata.sampleRate, "speaking");
   await ensureClipPlayer().play();
   audioStatus.textContent = `PLAYING ${clipMetadata.name ?? "AUDIO"}`;
@@ -259,6 +383,7 @@ async function importAvatar(file: File) {
 }
 
 async function startMic() {
+  stopTTS();
   stopAudioClip();
   statusText.textContent = "REQUESTING MIC";
   stream = await navigator.mediaDevices.getUserMedia({ audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
@@ -319,7 +444,7 @@ micButton.addEventListener("click", async () => {
 avatarSelect.addEventListener("change", async () => {
   avatarSelect.disabled = true;
   try {
-    const state: CharacterState = stream ? "listening" : clipPlayer?.state === "playing" ? "speaking" : "idle";
+    const state: CharacterState = stream ? "listening" : clipPlayer?.state === "playing" || ttsPlayer?.state === "playing" ? "speaking" : "idle";
     await mountSelectedSprite(audioContext?.sampleRate ?? clipMetadata?.sampleRate ?? 48000, state);
   } finally {
     avatarSelect.disabled = false;
@@ -351,6 +476,18 @@ audioPlayButton.addEventListener("click", async () => {
   }
 });
 audioStopButton.addEventListener("click", stopAudioClip);
+ttsText.addEventListener("input", updateTTSControls);
+ttsSpeakButton.addEventListener("click", async () => {
+  try {
+    await speakTTS();
+  } catch (error) {
+    console.error(error);
+    ttsStatus.textContent = error instanceof Error ? error.message.toUpperCase() : "TTS FAILED";
+    statusText.textContent = "TTS ERROR";
+    updateTTSControls();
+  }
+});
+ttsStopButton.addEventListener("click", stopTTS);
 
 for (const eventName of ["dragenter", "dragover"]) {
   stageWrap.addEventListener(eventName, (event) => {
@@ -372,8 +509,10 @@ stageWrap.addEventListener("drop", (event) => {
 window.addEventListener("beforeunload", () => {
   stream?.getTracks().forEach((track) => track.stop());
   void clipPlayer?.destroy();
+  void ttsPlayer?.destroy();
   customAvatar?.dispose();
 });
 
 mountSelectedSprite(48000, "idle").catch(console.error);
 updateClipControls();
+updateTTSControls();

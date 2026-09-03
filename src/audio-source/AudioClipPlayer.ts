@@ -33,6 +33,12 @@ export class AudioClipPlayer {
     return this.currentState;
   }
 
+  /** Resume audio from a user gesture before an asynchronous source is ready. */
+  async prepare(): Promise<void> {
+    this.assertActive();
+    await Promise.all([this.workletReady, this.context.resume()]);
+  }
+
   async load(input: File | Blob | ArrayBuffer): Promise<AudioClipMetadata> {
     this.assertActive();
     this.stopSource();
@@ -84,8 +90,7 @@ export class AudioClipPlayer {
 
   private async startPlayback(generation: number): Promise<void> {
     try {
-      await this.workletReady;
-      await this.context.resume();
+      await this.prepare();
       if (generation !== this.generation || this.currentState !== "playing") {
         throw new DOMException("Audio playback was cancelled", "AbortError");
       }

@@ -12,7 +12,7 @@ Click **TRY SAMPLE VOICE** in the live demo to see Niu Lai react immediately—n
 
 _The browser demo with Niu Lai loaded as the default audio-reactive avatar._
 
-The project currently ships a browser-first TypeScript engine that analyzes streaming PCM audio, selects five mouth states, adds automatic blinking, and renders layered PNG characters with Canvas 2D. The demo accepts microphone input or a local audio file. Audio analysis and file decoding stay in the browser without speech recognition, transcription, or a cloud service.
+The project currently ships a browser-first TypeScript engine that analyzes streaming PCM audio, selects five mouth states, adds automatic blinking, and renders layered PNG characters with Canvas 2D. The demo accepts microphone input, a local audio file, or locally generated English speech from KittenTTS. Audio analysis, file decoding, and the demo TTS path stay in the browser without speech recognition, transcription, or a cloud service.
 
 Support for additional 2D, Live2D, and 3D renderers is a long-term direction, not a feature of the current release.
 
@@ -56,7 +56,7 @@ See [ASSETS.md](ASSETS.md) for their licensing and provenance notes.
 
 ## Run from source
 
-Select a character and press **START MIC** for live input, **TRY SAMPLE VOICE** for the bundled demo clip, or **CHOOSE AUDIO** to decode and play a local audio file. Microphone access normally requires localhost or a secure HTTPS context.
+Select a character and press **START MIC** for live input, **TRY SAMPLE VOICE** for the bundled demo clip, **CHOOSE AUDIO** to decode and play a local audio file, or use **LOCAL TTS // KITTEN** to synthesize English speech. Microphone access normally requires localhost or a secure HTTPS context. KittenTTS requires WebGPU and downloads its Nano model on first use. The demo also serves the complete English phonemizer dictionary locally because the current npm package omits its runtime data assets.
 
 ### Load a custom character
 
@@ -144,12 +144,50 @@ sprite.destroy();
 
 `metadata.sampleRate` is the Web Audio processing rate used by the emitted PCM, so pass it to `TalkingSprite`. Browsers automatically resample source files such as 16 kHz or 24 kHz audio to the `AudioContext` rate. Supported file containers and codecs depend on the browser.
 
+### Drive a sprite from streaming TTS text
+
+`StreamingTTSPlayer` accepts complete text or text deltas, groups them into short speakable phrases, starts playback as soon as the first phrase is ready, synthesizes later phrases while audio is playing, and sends playback PCM through the same avatar input. Supply any synthesizer that returns a browser-decodable audio `Blob`:
+
+```ts
+import { StreamingTTSPlayer, TalkingSprite } from "../../src";
+import { textToSpeech } from "kitten-tts-webgpu";
+
+const tts = new StreamingTTSPlayer({
+  synthesize: (text, options) => textToSpeech(text, {
+    model: "nano",
+    voice: options.voice,
+    speed: options.speed,
+    onProgress: options.onProgress,
+  }),
+  voice: "Bella",
+  onPCM: (chunk) => sprite.pushPCM(chunk),
+});
+
+// Call prepare() from a click/tap to unlock Web Audio.
+await tts.prepare();
+
+// Feed deltas from a streaming model response.
+tts.write("Hello! ");
+tts.write("This sentence can be synthesized while more text arrives. ");
+tts.flush();
+
+// Interrupt playback and discard pending text/audio.
+tts.stop();
+```
+
+KittenTTS currently supports English only. It produces one WAV per phrase rather than raw audio frames; `StreamingTTSPlayer` provides low-latency queued playback, not model-native streaming synthesis.
+
+The demo exposes two playback policies. **SMOOTH** calls `speakComplete()` and waits for one complete synthesis so playback cannot underrun. **FAST START** calls `speak()` and begins after the first short phrase, but may pause if the current device synthesizes slower than audio plays.
+
+KittenTTS does not expose cancellation for an in-flight WebGPU generation. `stop()` immediately silences and clears scheduled playback, then reports `stopping` until the current synthesis call returns. New synthesis is rejected during that interval so GPU jobs cannot overlap and corrupt playback state.
+
 The source entry point exports:
 
 - `TalkingSprite`
 - `PCMAnalyzer`
 - `MouthClassifier`
 - `AudioClipPlayer`
+- `StreamingTTSPlayer` and `takeTTSChunks`
 - TypeScript definitions for character configuration, audio features, mouth states, and motion frames
 
 ## Character asset format
