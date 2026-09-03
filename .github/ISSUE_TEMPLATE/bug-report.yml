@@ -1,0 +1,39 @@
+name: Bug report
+description: Report a reproducible problem in the engine, demo, or asset workflow.
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: Thanks for helping improve Hoho Avatar. Please avoid including private audio or character assets.
+  - type: textarea
+    id: summary
+    attributes:
+      label: What happened?
+      description: Describe the behavior and what you expected instead.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Minimal reproduction
+      description: Include steps, a small repository, or a character configuration that reproduces the issue.
+      placeholder: |
+        1. Start the demo with ...
+        2. Load ...
+        3. Observe ...
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      description: Browser, operating system, Node.js version, and Hoho Avatar commit or version.
+      placeholder: Chrome 140, Windows 11, Node.js 22, commit abc1234
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Logs or additional context
+      description: Paste relevant console output or screenshots here.

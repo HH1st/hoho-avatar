@@ -1,0 +1,26 @@
+name: Character or asset request
+description: Propose a new original example character or an asset-pipeline improvement.
+title: "[Character]: "
+labels: ["enhancement"]
+body:
+  - type: input
+    id: concept
+    attributes:
+      label: Character concept
+      description: Give the original character a short, descriptive name.
+    validations:
+      required: true
+  - type: textarea
+    id: direction
+    attributes:
+      label: Visual direction
+      description: Describe the style, mood, and intended use. Only link assets you have permission to use.
+    validations:
+      required: true
+  - type: checkboxes
+    id: rights
+    attributes:
+      label: Rights and attribution
+      options:
+        - label: I have the rights to share any attached references and understand that original characters are preferred.
+          required: true

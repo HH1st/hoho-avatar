@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Live demo
+    url: https://hh1st.github.io/hoho-avatar/
+    about: Try the latest deployed demo before reporting an issue.

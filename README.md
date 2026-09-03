@@ -4,6 +4,10 @@ Hoho Avatar is an open-source toolkit for building speaking and audio-reactive a
 
 **[Try the live microphone and local audio demo](https://hh1st.github.io/hoho-avatar/)**
 
+![Niu Lai reacting to voice with Hoho Avatar](docs/images/niu-lai-talking.gif)
+
+Click **TRY SAMPLE VOICE** in the live demo to see Niu Lai react immediately—no microphone permission or audio file required.
+
 ![Hoho Avatar demo with Niu Lai as the default talking character](docs/images/niu-lai-demo.png)
 
 _The browser demo with Niu Lai loaded as the default audio-reactive avatar._
@@ -11,6 +15,28 @@ _The browser demo with Niu Lai loaded as the default audio-reactive avatar._
 The project currently ships a browser-first TypeScript engine that analyzes streaming PCM audio, selects five mouth states, adds automatic blinking, and renders layered PNG characters with Canvas 2D. The demo accepts microphone input or a local audio file. Audio analysis and file decoding stay in the browser without speech recognition, transcription, or a cloud service.
 
 Support for additional 2D, Live2D, and 3D renderers is a long-term direction, not a feature of the current release.
+
+## Try it in 60 seconds
+
+Requirements: Node.js 20.19 or newer and npm.
+
+```bash
+git clone https://github.com/HH1st/hoho-avatar.git
+cd hoho-avatar
+npm install
+npm run dev
+```
+
+Open the URL shown by Vite and press **TRY SAMPLE VOICE**. Everything runs locally in the browser.
+
+## Built for voice agents
+
+Hoho Avatar sits after your audio source: feed it mono PCM from a realtime model, text-to-speech engine, WebSocket, microphone, or prerecorded clip. The rendering layer does not depend on a specific AI provider, so it works well for:
+
+- Browser voice-agent interfaces
+- Local assistants and companion apps
+- Game dialogue and NPC prototypes
+- Streaming overlays and interactive demos
 
 ## What is included
 
@@ -30,16 +56,7 @@ See [ASSETS.md](ASSETS.md) for their licensing and provenance notes.
 
 ## Run from source
 
-Requirements: Node.js 20.19 or newer and npm.
-
-```bash
-git clone https://github.com/HH1st/hoho-avatar.git
-cd hoho-avatar
-npm install
-npm run dev
-```
-
-Open the local URL shown by Vite and select a character. Press **START MIC** and grant microphone permission for live input, or press **CHOOSE AUDIO** to decode and play a local audio file. Microphone access normally requires localhost or a secure HTTPS context.
+Select a character and press **START MIC** for live input, **TRY SAMPLE VOICE** for the bundled demo clip, or **CHOOSE AUDIO** to decode and play a local audio file. Microphone access normally requires localhost or a secure HTTPS context.
 
 ### Load a custom character
 

@@ -20,6 +20,8 @@ h1 em { color: #fed36a; font-style: normal; }
 .secondary { appearance: none; border: 1px solid #4c646d; padding: 10px 12px; color: #70d5cf; background: rgba(12,18,28,.72); font: 500 10px "DM Mono", monospace; letter-spacing: .08em; cursor: pointer; }
 .secondary:hover { border-color: #70d5cf; background: #13242b; }
 .secondary:disabled { opacity: .55; cursor: wait; }
+.sample-button { border-color: #a78948; color: #fed36a; box-shadow: 3px 3px 0 #4a3b20; }
+.sample-button:hover { border-color: #fed36a; background: #292319; }
 .upload-status { align-self: center; color: #66747d; font: 10px/1.4 "DM Mono", monospace; }
 .upload-status.success { color: #6ee7b7; }
 .upload-status.error { color: #ff8175; }

@@ -19,6 +19,7 @@ const stageWrap = document.querySelector<HTMLElement>(".stage-wrap")!;
 const uploadButton = document.querySelector<HTMLButtonElement>("#uploadButton")!;
 const avatarFile = document.querySelector<HTMLInputElement>("#avatarFile")!;
 const uploadStatus = document.querySelector<HTMLElement>("#uploadStatus")!;
+const sampleAudioButton = document.querySelector<HTMLButtonElement>("#sampleAudioButton")!;
 const audioChooseButton = document.querySelector<HTMLButtonElement>("#audioChooseButton")!;
 const audioFile = document.querySelector<HTMLInputElement>("#audioFile")!;
 const audioPlayButton = document.querySelector<HTMLButtonElement>("#audioPlayButton")!;
@@ -116,6 +117,7 @@ function updateClipProgress(currentTime: number, duration: number) {
 
 function updateClipControls() {
   const state = clipPlayer?.state ?? "empty";
+  sampleAudioButton.disabled = state === "loading" || state === "playing";
   audioChooseButton.disabled = state === "loading";
   audioPlayButton.disabled = !clipMetadata || state === "loading" || state === "playing";
   audioStopButton.disabled = state !== "playing";
@@ -190,6 +192,25 @@ async function playAudioClip() {
   statusText.textContent = "AUDIO LIVE";
   statusDot.classList.add("live");
   updateClipControls();
+}
+
+async function playSampleAudio() {
+  sampleAudioButton.disabled = true;
+  audioStatus.textContent = "LOADING SAMPLE VOICE";
+  try {
+    const response = await fetch(`${import.meta.env.BASE_URL}audio/sample-voice.wav`);
+    if (!response.ok) throw new Error(`Unable to load sample audio (${response.status}).`);
+    const sample = new File([await response.arrayBuffer()], "hoho-sample-voice.wav", { type: "audio/wav" });
+    await loadAudioClip(sample);
+    if (clipMetadata) await playAudioClip();
+  } catch (error) {
+    console.error(error);
+    stopAudioClip();
+    audioStatus.textContent = "UNABLE TO LOAD SAMPLE";
+    statusText.textContent = "AUDIO ERROR";
+  } finally {
+    updateClipControls();
+  }
 }
 
 async function importAvatar(file: File) {
@@ -312,6 +333,7 @@ avatarFile.addEventListener("change", () => {
 });
 
 audioChooseButton.addEventListener("click", () => audioFile.click());
+sampleAudioButton.addEventListener("click", () => void playSampleAudio());
 audioFile.addEventListener("change", () => {
   const file = audioFile.files?.[0];
   if (file) void loadAudioClip(file);
