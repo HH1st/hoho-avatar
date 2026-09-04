@@ -185,7 +185,7 @@ KittenTTS does not expose cancellation for an in-flight WebGPU generation. `stop
 
 The demo can also run a full-duplex voice conversation through Azure OpenAI Realtime. The browser connects only to the included gateway; the gateway obtains an Entra token through Managed Identity and never exposes it to browser code. Copy `.env.example` to `.env` and set `AZURE_OPENAI_DOMAIN` and `AZURE_OPENAI_REALTIME_DEPLOYMENT` to your own Azure resource and deployment.
 
-The gateway runtime uses three continuously running asynchronous loops. The Input Loop normalizes browser audio or text events and enqueues them; the Process Loop concurrently sends input to Realtime and consumes backend events; the Output Loop independently delivers audio, transcript, and interruption events back to the browser. Each response is tagged with a generation so output arriving after an interruption is discarded. The browser remains a thin input/output adapter, and avatar rendering only consumes the PCM that is actually played.
+The gateway runtime uses three continuously running asynchronous loops separated by two queues. The Input Loop normalizes browser and Realtime events into the input queue; the Process Loop transforms those events and places browser-facing events in the output queue; the Output Loop independently delivers audio, transcript, and interruption events. Each response is tagged with a generation so output arriving after an interruption is discarded. The browser remains a thin input/output adapter, and avatar rendering only consumes the PCM that is actually played.
 
 Give the deployed identity the Azure OpenAI inference role for the resource, then run the two processes:
 
