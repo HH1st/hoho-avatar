@@ -16,11 +16,17 @@
         <div class="status-pill"><span id="statusDot"></span><span id="statusText">STANDBY</span></div>
       </header>
 
-      <section class="hero">
-        <div class="copy">
-          <p class="eyebrow">PCM-DRIVEN AVATAR / MVP 01</p>
-          <h1>Your voice.<br /><em>Rendered alive.</em></h1>
-          <p class="lede">Browser microphone audio becomes five crisp mouth states in real time. No transcript, no cloud, no rig.</p>
+      <section class="intro">
+        <div>
+          <p class="eyebrow">AUDIO-REACTIVE AVATAR LAB</p>
+          <h1>Give your voice<br /><em>a face.</em></h1>
+        </div>
+        <p class="lede">Choose a character, connect an audio provider, and watch speech become motion in real time.</p>
+      </section>
+
+      <section class="avatar-workspace">
+        <div class="avatar-panel section-card">
+          <div class="section-heading"><span>01</span><div><strong>AVATAR</strong><small>Choose the visual identity</small></div></div>
           <div class="avatar-tools">
             <label class="avatar-picker">
               <span>AVATAR</span>
@@ -34,14 +40,42 @@
             <input id="avatarFile" type="file" accept=".zip,application/zip" hidden />
             <span id="uploadStatus" class="upload-status" aria-live="polite">Drop a skill-generated character ZIP on the stage</span>
           </div>
-          <div class="controls">
+          <div class="avatar-notes"><span>LAYERED PNG</span><span>5 MOUTH STATES</span><span>AUTO BLINK</span></div>
+        </div>
+
+        <div class="stage-wrap">
+          <div class="corner top-left"></div><div class="corner top-right"></div>
+          <div class="corner bottom-left"></div><div class="corner bottom-right"></div>
+          <div class="stage-grid"></div>
+          <canvas id="avatar" width="512" height="512" aria-label="Talking pixel avatar"></canvas>
+          <div class="scanline"></div>
+          <div class="drop-overlay">DROP CHARACTER ZIP</div>
+          <div id="stageLabel" class="stage-label">AVATAR // PIXEL BOT</div>
+        </div>
+      </section>
+
+      <section class="provider-section section-card">
+        <div class="section-heading provider-title"><span>02</span><div><strong>AUDIO PROVIDER</strong><small>Select one way to drive the avatar</small></div></div>
+        <div class="provider-tabs" role="tablist" aria-label="Audio provider">
+          <button class="provider-tab active" data-provider="mic" role="tab" aria-selected="true">MICROPHONE<small>Live local input</small></button>
+          <button class="provider-tab" data-provider="file" role="tab" aria-selected="false">AUDIO FILE<small>Local playback</small></button>
+          <button class="provider-tab" data-provider="tts" role="tab" aria-selected="false">LOCAL TTS<small>Kitten WebGPU</small></button>
+          <button class="provider-tab" data-provider="agent" role="tab" aria-selected="false">VOICE AGENT<small>Azure Realtime</small></button>
+        </div>
+
+        <div class="provider-body">
+          <div class="provider-panel active" data-provider-panel="mic" role="tabpanel">
+            <div class="provider-copy"><strong>Speak into your microphone</strong><span>Audio is analyzed locally and never leaves this tab.</span></div>
             <button id="micButton" class="primary"><span class="mic-icon">●</span><span id="buttonLabel">START MIC</span></button>
-            <button id="sampleAudioButton" class="secondary sample-button" type="button">TRY SAMPLE VOICE</button>
-            <button id="audioChooseButton" class="secondary" type="button">CHOOSE AUDIO</button>
-            <input id="audioFile" type="file" accept="audio/*" hidden />
-            <span class="privacy">Audio stays in this tab</span>
           </div>
-          <div class="audio-clip">
+
+          <div class="provider-panel" data-provider-panel="file" role="tabpanel" hidden>
+            <div class="provider-actions">
+              <button id="sampleAudioButton" class="secondary sample-button" type="button">TRY SAMPLE</button>
+              <button id="audioChooseButton" class="secondary" type="button">CHOOSE AUDIO</button>
+              <input id="audioFile" type="file" accept="audio/*" hidden />
+            </div>
+            <div class="audio-clip">
             <div class="audio-clip-info">
               <span id="audioStatus" aria-live="polite">NO AUDIO SELECTED</span>
               <span id="audioProgress">00:00 / 00:00</span>
@@ -52,6 +86,9 @@
               <button id="audioStopButton" class="secondary" type="button" disabled>STOP</button>
             </div>
           </div>
+          </div>
+
+          <div class="provider-panel" data-provider-panel="tts" role="tabpanel" hidden>
           <div class="tts-panel">
             <div class="tts-heading"><span>LOCAL TTS // KITTEN</span><span id="ttsStatus" aria-live="polite">ENGLISH / WEBGPU</span></div>
             <textarea id="ttsText" rows="3" maxlength="500" placeholder="Type something for your avatar to say…">Hey, I'm Niu Lai. How's your day so far?</textarea>
@@ -78,17 +115,21 @@
               <button id="ttsStopButton" class="secondary" type="button" disabled>STOP</button>
             </div>
           </div>
-        </div>
+          </div>
 
-        <div class="stage-wrap">
-          <div class="corner top-left"></div><div class="corner top-right"></div>
-          <div class="corner bottom-left"></div><div class="corner bottom-right"></div>
-          <div class="stage-grid"></div>
-          <canvas id="avatar" width="512" height="512" aria-label="Talking pixel avatar"></canvas>
-          <div class="scanline"></div>
-          <div class="drop-overlay">DROP CHARACTER ZIP</div>
-          <div id="stageLabel" class="stage-label">AVATAR // PIXEL BOT</div>
+          <div class="provider-panel" data-provider-panel="agent" role="tabpanel" hidden>
+            <div class="voice-agent-panel">
+              <div class="tts-heading"><span>VOICE AGENT // AZURE REALTIME</span><span id="agentStatus" aria-live="polite">DISCONNECTED</span></div>
+              <p id="agentTranscript" class="agent-transcript">Start a conversation, then speak naturally.</p>
+              <div class="agent-actions">
+                <button id="agentConnectButton" class="secondary sample-button" type="button">START CONVERSATION</button>
+                <button id="agentInterruptButton" class="secondary" type="button" disabled>INTERRUPT</button>
+                <button id="agentDisconnectButton" class="secondary" type="button" disabled>END</button>
+              </div>
+            </div>
+          </div>
         </div>
+        <div id="privacyNotice" class="provider-privacy">LOCAL MODE // AUDIO STAYS IN THIS TAB</div>
       </section>
 
       <section class="telemetry">

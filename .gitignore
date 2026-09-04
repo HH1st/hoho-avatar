@@ -5,9 +5,26 @@ package-lock.json
 *.log
 tmp/
 working/
+# Local environment and credential configuration. Commit examples only.
 .env
 .env.*
 !.env.example
+*.local
+*.local.*
+
+# Azure CLI, identity, and deployment artifacts must stay outside the repo.
+.azure/
+azureProfile.json
+accessTokens.json
+msal_token_cache*
+*.publishsettings
+*.parameters.json
+
+# Local certificates and private keys.
+*.pem
+*.key
+*.pfx
+*.p12
 coverage/
 *.tgz
 .DS_Store

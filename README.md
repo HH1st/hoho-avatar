@@ -12,7 +12,7 @@ Click **TRY SAMPLE VOICE** in the live demo to see Niu Lai react immediately—n
 
 _The browser demo with Niu Lai loaded as the default audio-reactive avatar._
 
-The project currently ships a browser-first TypeScript engine that analyzes streaming PCM audio, selects five mouth states, adds automatic blinking, and renders layered PNG characters with Canvas 2D. The demo accepts microphone input, a local audio file, or locally generated English speech from KittenTTS. Audio analysis, file decoding, and the demo TTS path stay in the browser without speech recognition, transcription, or a cloud service.
+The project currently ships a browser-first TypeScript engine that analyzes streaming PCM audio, selects five mouth states, adds automatic blinking, and renders layered PNG characters with Canvas 2D. The demo accepts microphone input, a local audio file, locally generated English speech from KittenTTS, or an optional Azure Realtime voice-agent session. Local audio analysis, file decoding, and KittenTTS stay in the browser; Voice Agent mode explicitly sends microphone audio to the configured Azure OpenAI resource.
 
 Support for additional 2D, Live2D, and 3D renderers is a long-term direction, not a feature of the current release.
 
@@ -181,6 +181,21 @@ The demo exposes two playback policies. **SMOOTH** calls `speakComplete()` and w
 
 KittenTTS does not expose cancellation for an in-flight WebGPU generation. `stop()` immediately silences and clears scheduled playback, then reports `stopping` until the current synthesis call returns. New synthesis is rejected during that interval so GPU jobs cannot overlap and corrupt playback state.
 
+### Azure Realtime voice agent
+
+The demo can also run a full-duplex voice conversation through Azure OpenAI Realtime. The browser connects only to the included gateway; the gateway obtains an Entra token through Managed Identity and never exposes it to browser code. Copy `.env.example` to `.env` and set `AZURE_OPENAI_DOMAIN` and `AZURE_OPENAI_REALTIME_DEPLOYMENT` to your own Azure resource and deployment.
+
+Give the deployed identity the Azure OpenAI inference role for the resource, then run the two processes:
+
+```bash
+npm run dev:voice-agent
+npm run dev
+```
+
+Production uses system-assigned Managed Identity by default. Set `AZURE_CLIENT_ID` for a user-assigned identity. For local development only, copy `.env.example` to `.env`, set `AZURE_USE_DEFAULT_CREDENTIAL=1`, and authenticate with `az login`; this mode uses `AzureCliCredential` explicitly. Set `VOICE_AGENT_ALLOWED_ORIGINS` to the deployed site origin before exposing the gateway publicly.
+
+Local Vite development connects through the built-in `/voice-agent` proxy. Static production builds, including the GitHub Pages demo, disable the Voice Agent tab unless `VITE_VOICE_AGENT_URL` is explicitly set to a deployed `wss://` gateway URL.
+
 The source entry point exports:
 
 - `TalkingSprite`
@@ -189,6 +204,7 @@ The source entry point exports:
 - `AudioClipPlayer`
 - `AudioQueuePlayer`
 - `StreamingTTSPlayer` and `takeTTSChunks`
+- `AzureVoiceAgentProvider` and `StreamingPCMPlayer`
 - `parseCharacterDefinition` for validating untrusted character JSON
 - TypeScript definitions for character configuration, audio features, mouth states, and motion frames
 
@@ -333,7 +349,7 @@ microphone / audio file / TTS
 
 ## Privacy and browser support
 
-The engine processes PCM data in the browser. It does not transcribe speech or upload audio. The example application requests microphone access only after the user presses the microphone button, and selected audio files are decoded locally without being uploaded.
+The engine processes PCM data in the browser. Local microphone visualization and selected audio files are not uploaded. When the user explicitly starts Voice Agent mode, the example streams microphone audio through the Managed Identity gateway to the configured Azure OpenAI Realtime deployment and renders the returned audio transcript.
 
 Applications embedding the engine remain responsible for how they acquire, store, or transmit audio outside the engine.
 

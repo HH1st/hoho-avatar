@@ -7,6 +7,11 @@ export type { AudioClipMetadata, AudioClipPlayerOptions, AudioClipPlayerState } 
 export { AudioQueuePlayer } from "./audio-source/AudioQueuePlayer";
 export type { AudioQueuePlayerOptions } from "./audio-source/AudioQueuePlayer";
 export { StreamingTTSPlayer, takeTTSChunks } from "./audio-source/StreamingTTSPlayer";
+export { AzureVoiceAgentProvider } from "./voice-agent/AzureVoiceAgentProvider";
+export type { AzureVoiceAgentProviderOptions } from "./voice-agent/AzureVoiceAgentProvider";
+export { StreamingPCMPlayer } from "./voice-agent/StreamingPCMPlayer";
+export type { StreamingPCMPlayerOptions } from "./voice-agent/StreamingPCMPlayer";
+export type { VoiceAgentProvider, VoiceAgentProviderEvents, VoiceAgentSessionOptions, VoiceAgentState } from "./voice-agent/VoiceAgentProvider";
 export type {
   StreamingTTSPlayerOptions,
   StreamingTTSPlayerState,

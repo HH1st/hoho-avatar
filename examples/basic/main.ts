@@ -1,4 +1,4 @@
-import { AudioClipPlayer, StreamingTTSPlayer, TalkingSprite } from "../../src";
+import { AudioClipPlayer, AzureVoiceAgentProvider, StreamingPCMPlayer, StreamingTTSPlayer, TalkingSprite } from "../../src";
 import type { AudioClipMetadata, CharacterDefinition, CharacterState } from "../../src";
 import { loadCharacterPackage, type LoadedCharacterPackage } from "./characterPackage";
 import "./style.css";
@@ -35,6 +35,18 @@ const ttsMode = document.querySelector<HTMLSelectElement>("#ttsMode")!;
 const ttsSpeakButton = document.querySelector<HTMLButtonElement>("#ttsSpeakButton")!;
 const ttsStopButton = document.querySelector<HTMLButtonElement>("#ttsStopButton")!;
 const ttsStatus = document.querySelector<HTMLElement>("#ttsStatus")!;
+const agentStatus = document.querySelector<HTMLElement>("#agentStatus")!;
+const agentTranscript = document.querySelector<HTMLElement>("#agentTranscript")!;
+const agentConnectButton = document.querySelector<HTMLButtonElement>("#agentConnectButton")!;
+const agentInterruptButton = document.querySelector<HTMLButtonElement>("#agentInterruptButton")!;
+const agentDisconnectButton = document.querySelector<HTMLButtonElement>("#agentDisconnectButton")!;
+const privacyNotice = document.querySelector<HTMLElement>("#privacyNotice")!;
+const providerTabs = Array.from(document.querySelectorAll<HTMLButtonElement>(".provider-tab"));
+const providerPanels = Array.from(document.querySelectorAll<HTMLElement>(".provider-panel"));
+const voiceAgentTab = providerTabs.find((tab) => tab.dataset.provider === "agent");
+const configuredVoiceAgentUrl = import.meta.env.VITE_VOICE_AGENT_URL?.trim();
+const localVoiceAgentAvailable = import.meta.env.DEV;
+const voiceAgentAvailable = localVoiceAgentAvailable || Boolean(configuredVoiceAgentUrl);
 
 const barElements = Array.from({ length: 32 }, () => {
   const bar = document.createElement("i");
@@ -55,6 +67,9 @@ let ttsPlayer: StreamingTTSPlayer | undefined;
 let ttsPlaybackStarted = false;
 let kittenModule: Promise<typeof import("kitten-tts-webgpu")> | undefined;
 let ttsTextEdited = false;
+let voiceAgent: AzureVoiceAgentProvider | undefined;
+let agentPlayer: StreamingPCMPlayer | undefined;
+let agentTranscriptText = "";
 
 const avatars = {
   "niu-lai": {
@@ -262,6 +277,7 @@ function stopTTS() {
 async function speakTTS() {
   const text = ttsText.value.trim();
   if (!text) return;
+  if (voiceAgent && voiceAgent.state !== "idle" && voiceAgent.state !== "destroyed") await stopVoiceAgent();
   if (!("gpu" in navigator)) {
     ttsStatus.textContent = "WEBGPU IS NOT AVAILABLE";
     statusText.textContent = "TTS UNSUPPORTED";
@@ -285,6 +301,7 @@ async function speakTTS() {
 }
 
 async function loadAudioClip(file: File) {
+  if (voiceAgent && voiceAgent.state !== "idle" && voiceAgent.state !== "destroyed") await stopVoiceAgent();
   if (stream) await stopMic();
   stopTTS();
   stopAudioClip();
@@ -412,7 +429,11 @@ async function startMic() {
   processor = audioContext.createScriptProcessor(1024, 1, 1);
   sink = audioContext.createGain();
   sink.gain.value = 0;
-  processor.onaudioprocess = (event) => sprite?.pushPCM(event.inputBuffer.getChannelData(0));
+  processor.onaudioprocess = (event) => {
+    const chunk = event.inputBuffer.getChannelData(0);
+    if (voiceAgent?.state === "connected") voiceAgent.sendAudio(chunk, audioContext?.sampleRate ?? 48_000);
+    else sprite?.pushPCM(chunk);
+  };
   source.connect(processor);
   processor.connect(sink);
   sink.connect(audioContext.destination);
@@ -440,6 +461,140 @@ async function stopMic() {
   statusText.textContent = "STANDBY";
   statusDot.classList.remove("live");
   await mountSelectedSprite(clipMetadata?.sampleRate ?? 48000, "idle");
+}
+
+function voiceAgentUrl(): string {
+  if (configuredVoiceAgentUrl) return configuredVoiceAgentUrl;
+  if (!localVoiceAgentAvailable) throw new Error("Voice Agent gateway is not configured");
+  const url = new URL("/voice-agent", window.location.href);
+  url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
+  return url.href;
+}
+
+function updateVoiceAgentControls() {
+  const state = voiceAgent?.state ?? "idle";
+  agentConnectButton.disabled = state === "connecting" || state === "connected";
+  agentInterruptButton.disabled = state !== "connected";
+  agentDisconnectButton.disabled = state !== "connecting" && state !== "connected";
+}
+
+async function startVoiceAgent() {
+  stopTTS();
+  stopAudioClip();
+  if (stream) await stopMic();
+  agentPlayer = new StreamingPCMPlayer({
+    sampleRate: 24_000,
+    onPCM: (chunk) => sprite?.pushPCM(chunk),
+    onPlaybackEnd: () => sprite?.resetAudio(),
+  });
+  await agentPlayer.prepare();
+  const playbackSampleRate = agentPlayer.outputSampleRate;
+  agentTranscriptText = "";
+  privacyNotice.textContent = "Voice Agent sends microphone audio to Azure OpenAI";
+  voiceAgent = new AzureVoiceAgentProvider({
+    gatewayUrl: voiceAgentUrl(),
+    onAudio: (pcm) => agentPlayer?.appendPCM16(pcm),
+    onTranscriptDelta: (delta) => {
+      agentTranscriptText += delta;
+      agentTranscript.textContent = agentTranscriptText;
+    },
+    onUserSpeechStart: () => {
+      agentPlayer?.interrupt();
+      sprite?.resetAudio();
+      agentStatus.textContent = "LISTENING";
+      statusText.textContent = "AGENT LISTENING";
+    },
+    onUserSpeechEnd: () => {
+      agentStatus.textContent = "THINKING";
+      statusText.textContent = "AGENT THINKING";
+    },
+    onResponseStart: () => {
+      agentTranscriptText = "";
+      agentTranscript.textContent = "…";
+      agentStatus.textContent = "RESPONDING";
+      statusText.textContent = "AGENT SPEAKING";
+    },
+    onResponseEnd: () => {
+      agentStatus.textContent = "CONNECTED";
+      statusText.textContent = "AGENT LIVE";
+    },
+    onStateChange: (state) => {
+      if (state === "connecting") agentStatus.textContent = "AUTHENTICATING";
+      if (state === "connected") agentStatus.textContent = "CONNECTED";
+      if (state === "idle") agentStatus.textContent = "DISCONNECTED";
+      updateVoiceAgentControls();
+    },
+    onError: (error) => {
+      console.error(error);
+      agentStatus.textContent = error.message.toUpperCase();
+      statusText.textContent = "AGENT ERROR";
+      statusDot.classList.remove("live");
+    },
+  });
+
+  await voiceAgent.connect({
+    voice: "cedar",
+    instructions: `You are ${selectedAvatar().label.replace("AVATAR // ", "")}, a warm and concise voice companion. Keep spoken responses short and natural.`,
+  });
+  await startMic();
+  await mountSelectedSprite(playbackSampleRate, "listening");
+  sampleRateLabel.textContent = `${(playbackSampleRate / 1000).toFixed(1)} kHz`;
+  statusText.textContent = "AGENT LIVE";
+  statusDot.classList.add("live");
+  updateVoiceAgentControls();
+}
+
+async function stopVoiceAgent() {
+  voiceAgent?.destroy();
+  voiceAgent = undefined;
+  await agentPlayer?.destroy();
+  agentPlayer = undefined;
+  if (stream) await stopMic();
+  agentStatus.textContent = "DISCONNECTED";
+  agentTranscript.textContent = "Start a conversation, then speak naturally.";
+  privacyNotice.textContent = "Local modes keep audio in this tab";
+  updateVoiceAgentControls();
+}
+
+async function failVoiceAgent(error: unknown) {
+  console.error(error);
+  const message = error instanceof Error ? error.message.toUpperCase() : "CONNECTION FAILED";
+  voiceAgent?.destroy();
+  voiceAgent = undefined;
+  await agentPlayer?.destroy();
+  agentPlayer = undefined;
+  if (stream) await stopMic();
+  agentStatus.textContent = message;
+  statusText.textContent = "AGENT ERROR";
+  statusDot.classList.remove("live");
+  privacyNotice.textContent = "Local modes keep audio in this tab";
+  updateVoiceAgentControls();
+}
+
+type ProviderName = "mic" | "file" | "tts" | "agent";
+
+async function stopActiveProvider(next: ProviderName) {
+  if (next !== "agent" && voiceAgent && voiceAgent.state !== "idle" && voiceAgent.state !== "destroyed") await stopVoiceAgent();
+  if (next !== "mic" && stream && !voiceAgent) await stopMic();
+  if (next !== "file") stopAudioClip();
+  if (next !== "tts") stopTTS();
+}
+
+async function selectProvider(provider: ProviderName) {
+  await stopActiveProvider(provider);
+  for (const tab of providerTabs) {
+    const active = tab.dataset.provider === provider;
+    tab.classList.toggle("active", active);
+    tab.setAttribute("aria-selected", String(active));
+  }
+  for (const panel of providerPanels) {
+    const active = panel.dataset.providerPanel === provider;
+    panel.classList.toggle("active", active);
+    panel.hidden = !active;
+  }
+  privacyNotice.textContent = provider === "agent"
+    ? "CLOUD MODE // MICROPHONE AUDIO IS SENT TO AZURE OPENAI"
+    : "LOCAL MODE // AUDIO STAYS IN THIS TAB";
 }
 
 micButton.addEventListener("click", async () => {
@@ -507,6 +662,22 @@ ttsSpeakButton.addEventListener("click", async () => {
   }
 });
 ttsStopButton.addEventListener("click", stopTTS);
+agentConnectButton.addEventListener("click", async () => {
+  try {
+    await startVoiceAgent();
+  } catch (error) {
+    await failVoiceAgent(error);
+  }
+});
+agentInterruptButton.addEventListener("click", () => {
+  voiceAgent?.interrupt();
+  agentPlayer?.interrupt();
+  sprite?.resetAudio();
+});
+agentDisconnectButton.addEventListener("click", () => void stopVoiceAgent());
+for (const tab of providerTabs) {
+  tab.addEventListener("click", () => void selectProvider(tab.dataset.provider as ProviderName));
+}
 
 for (const eventName of ["dragenter", "dragover"]) {
   stageWrap.addEventListener(eventName, (event) => {
@@ -529,9 +700,18 @@ window.addEventListener("beforeunload", () => {
   stream?.getTracks().forEach((track) => track.stop());
   void clipPlayer?.destroy();
   void ttsPlayer?.destroy();
+  voiceAgent?.destroy();
+  void agentPlayer?.destroy();
   customAvatar?.dispose();
 });
 
 mountSelectedSprite(48000, "idle").catch(console.error);
 updateClipControls();
 updateTTSControls();
+updateVoiceAgentControls();
+if (!voiceAgentAvailable && voiceAgentTab) {
+  voiceAgentTab.disabled = true;
+  voiceAgentTab.setAttribute("aria-disabled", "true");
+  const description = voiceAgentTab.querySelector("small");
+  if (description) description.textContent = "Gateway not configured";
+}
