@@ -36,15 +36,9 @@ Acceptance criteria:
 
 ## Dependency reproducibility
 
-Status: deferred while the repository is source-first.
+Status: implemented for source development and CI. Revisit release snapshots when package publishing begins.
 
-The repository intentionally does not commit `package-lock.json`, because local development currently uses environment-specific registry infrastructure. Revisit this before a formal release so CI and releases resolve an auditable, reproducible dependency graph without committing internal registry URLs.
-
-Possible approaches:
-
-- generate a sanitized lockfile against the public npm registry in release automation;
-- adopt a package manager and lockfile format that can remain registry-neutral;
-- keep source development unlocked but generate and verify a release-only dependency snapshot.
+The repository commits a public-registry `package-lock.json`, and CI installs it with `npm ci` so builds resolve an auditable, reproducible dependency graph without internal registry URLs.
 
 ## Renderer expansion
 

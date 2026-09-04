@@ -23,7 +23,7 @@ jobs:
           python-version: "3.12"
           cache: pip
 
-      - run: npm install
+      - run: npm ci
       - run: python -m pip install -r skills/generate-talking-sprite-character/requirements.txt
       - run: npm run typecheck
       - run: npm test

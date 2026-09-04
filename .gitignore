@@ -1,7 +1,6 @@
 node_modules/
 dist/
 npm-cache/
-package-lock.json
 *.log
 tmp/
 working/
