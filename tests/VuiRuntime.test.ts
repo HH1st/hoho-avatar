@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { AzureVoiceAgentProvider } from "../src/voice-agent/AzureVoiceAgentProvider";
+import { VuiRuntime } from "../src/voice-agent/vui";
 import { base64ToPCM16, pcm16ToBase64, resampleFloat32ToPCM16 } from "../src/voice-agent/pcm";
 
 class FakeWebSocket {
@@ -16,13 +16,22 @@ class FakeWebSocket {
   emit(event: object) { this.onmessage?.({ data: JSON.stringify(event) }); }
 }
 
-describe("AzureVoiceAgentProvider", () => {
+async function connect(provider: VuiRuntime): Promise<FakeWebSocket> {
+  const connected = provider.connect();
+  const socket = FakeWebSocket.instance;
+  socket.emit({ type: "gateway.ready" });
+  socket.emit({ type: "session.updated" });
+  await connected;
+  return socket;
+}
+
+describe("VuiRuntime", () => {
   beforeEach(() => vi.stubGlobal("WebSocket", FakeWebSocket));
   afterEach(() => vi.unstubAllGlobals());
 
   it("configures the session after the gateway authenticates", async () => {
     const states: string[] = [];
-    const provider = new AzureVoiceAgentProvider({ gatewayUrl: "ws://localhost/voice-agent", onStateChange: (state) => states.push(state) });
+    const provider = new VuiRuntime({ gatewayUrl: "ws://localhost/voice-agent", onStateChange: (state) => states.push(state) });
     const connected = provider.connect({ voice: "marin", instructions: "Be concise." });
     FakeWebSocket.instance.emit({ type: "gateway.ready" });
     expect(provider.state).toBe("connecting");
@@ -38,7 +47,7 @@ describe("AzureVoiceAgentProvider", () => {
   });
 
   it("uses cedar as the default voice", async () => {
-    const provider = new AzureVoiceAgentProvider({ gatewayUrl: "ws://localhost/voice-agent" });
+    const provider = new VuiRuntime({ gatewayUrl: "ws://localhost/voice-agent" });
     const connected = provider.connect();
     FakeWebSocket.instance.emit({ type: "gateway.ready" });
     FakeWebSocket.instance.emit({ type: "session.updated" });
@@ -51,27 +60,66 @@ describe("AzureVoiceAgentProvider", () => {
   it("routes output audio and speech lifecycle events", async () => {
     const onAudio = vi.fn();
     const onSpeechStart = vi.fn();
-    const provider = new AzureVoiceAgentProvider({
+    const provider = new VuiRuntime({
       gatewayUrl: "ws://localhost/voice-agent",
       onAudio,
       onUserSpeechStart: onSpeechStart,
     });
-    const connected = provider.connect();
-    FakeWebSocket.instance.emit({ type: "gateway.ready" });
-    FakeWebSocket.instance.emit({ type: "session.updated" });
-    await connected;
+    const socket = await connect(provider);
     const pcm = new Int16Array([1, -2, 3]);
-    FakeWebSocket.instance.emit({ type: "response.output_audio.delta", delta: pcm16ToBase64(pcm) });
-    FakeWebSocket.instance.emit({ type: "input_audio_buffer.speech_started" });
+    socket.emit({ type: "response.created", response: { id: "response-1" } });
+    socket.emit({ type: "response.output_audio.delta", response_id: "response-1", delta: pcm16ToBase64(pcm) });
+    await vi.waitFor(() => expect(onAudio).toHaveBeenCalledOnce());
+    socket.emit({ type: "input_audio_buffer.speech_started" });
 
     expect(onAudio.mock.calls[0]?.[0]).toEqual(pcm);
-    expect(onSpeechStart).toHaveBeenCalledOnce();
+    await vi.waitFor(() => expect(onSpeechStart).toHaveBeenCalledOnce());
+  });
+
+  it("drops stale output after interruption", async () => {
+    const onAudio = vi.fn();
+    const onOutputInterrupted = vi.fn();
+    const onUserSpeechEnd = vi.fn();
+    const provider = new VuiRuntime({
+      gatewayUrl: "ws://localhost/voice-agent",
+      onAudio,
+      onOutputInterrupted,
+      onUserSpeechEnd,
+    });
+    const socket = await connect(provider);
+    socket.emit({ type: "response.created", response: { id: "response-1" } });
+    await vi.waitFor(() => expect(provider.state).toBe("connected"));
+
+    provider.interrupt();
+    await vi.waitFor(() => expect(onOutputInterrupted).toHaveBeenCalledOnce());
+    socket.emit({
+      type: "response.output_audio.delta",
+      response_id: "response-1",
+      delta: pcm16ToBase64(new Int16Array([7, 8, 9])),
+    });
+    socket.emit({ type: "input_audio_buffer.speech_stopped" });
+    await vi.waitFor(() => expect(onUserSpeechEnd).toHaveBeenCalledOnce());
+
+    expect(onAudio).not.toHaveBeenCalled();
+    expect(socket.send.mock.calls.map(([message]) => JSON.parse(message as string).type)).toContain("response.cancel");
+  });
+
+  it("accepts text input through the process loop", async () => {
+    const provider = new VuiRuntime({ gatewayUrl: "ws://localhost/voice-agent" });
+    const socket = await connect(provider);
+    provider.sendText(" hello ");
+
+    await vi.waitFor(() => {
+      const events = socket.send.mock.calls.map(([message]) => JSON.parse(message as string));
+      expect(events.some((event) => event.type === "conversation.item.create" && event.item.content[0].text === "hello")).toBe(true);
+      expect(events.some((event) => event.type === "response.create")).toBe(true);
+    });
   });
 
   it("rejects connect when Azure rejects the session configuration", async () => {
     const states: string[] = [];
     const onError = vi.fn();
-    const provider = new AzureVoiceAgentProvider({
+    const provider = new VuiRuntime({
       gatewayUrl: "ws://localhost/voice-agent",
       onError,
       onStateChange: (state) => states.push(state),
@@ -83,7 +131,7 @@ describe("AzureVoiceAgentProvider", () => {
     await expect(connected).rejects.toThrow("invalid session");
     expect(provider.state).toBe("error");
     expect(states).toEqual(["connecting", "error"]);
-    expect(onError).toHaveBeenCalledOnce();
+    await vi.waitFor(() => expect(onError).toHaveBeenCalledOnce());
   });
 });
 
