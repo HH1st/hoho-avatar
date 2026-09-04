@@ -1,6 +1,7 @@
 import { createServer } from "node:http";
 import { AzureCliCredential, ManagedIdentityCredential } from "@azure/identity";
 import WebSocket, { WebSocketServer } from "ws";
+import { VuiRuntime } from "./vui-runtime.mjs";
 
 const port = Number(process.env.VOICE_AGENT_PORT ?? 8787);
 const host = process.env.VOICE_AGENT_HOST ?? "127.0.0.1";
@@ -101,21 +102,15 @@ clients.on("connection", async (client) => {
     return;
   }
 
-  if (client.readyState === WebSocket.OPEN) client.send(JSON.stringify({ type: "gateway.ready" }));
-  upstream.on("message", (data, isBinary) => {
-    if (client.readyState === WebSocket.OPEN) client.send(data, { binary: isBinary });
-  });
-  upstream.on("error", (error) => {
-    if (client.readyState === WebSocket.OPEN) client.send(JSON.stringify({ type: "gateway.error", message: error.message }));
-  });
-  upstream.on("close", (code) => closeBoth(code === 1000 ? 1000 : 1011, "Azure Realtime disconnected"));
-  client.on("message", (data, isBinary) => {
-    if (upstream?.readyState === WebSocket.OPEN) upstream.send(data, { binary: isBinary });
-  });
-  client.on("close", () => {
-    if (upstream?.readyState === WebSocket.OPEN || upstream?.readyState === WebSocket.CONNECTING) upstream.close();
-  });
-  client.on("error", () => upstream?.close());
+  const runtime = new VuiRuntime(client, upstream);
+  try {
+    await runtime.run();
+    closeBoth(1000, "VUI session ended");
+  } catch (error) {
+    if (client.readyState === WebSocket.OPEN) client.send(JSON.stringify({ type: "error", message: error instanceof Error ? error.message : "VUI runtime failed" }));
+    runtime.stop();
+    closeBoth(1011, "VUI runtime failed");
+  }
 });
 
 server.listen(port, host, () => {

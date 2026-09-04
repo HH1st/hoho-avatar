@@ -7,8 +7,8 @@ export type { AudioClipMetadata, AudioClipPlayerOptions, AudioClipPlayerState } 
 export { AudioQueuePlayer } from "./audio-source/AudioQueuePlayer";
 export type { AudioQueuePlayerOptions } from "./audio-source/AudioQueuePlayer";
 export { StreamingTTSPlayer, takeTTSChunks } from "./audio-source/StreamingTTSPlayer";
-export { VuiRuntime } from "./voice-agent/vui";
-export type { VuiEvents, VuiInput, VuiRuntimeOptions, VuiSessionOptions, VuiState } from "./voice-agent/types";
+export { VuiClient } from "./voice-agent/VuiClient";
+export type { VuiClientOptions, VuiEvents, VuiSessionOptions, VuiState } from "./voice-agent/types";
 export { StreamingPCMPlayer } from "./voice-agent/StreamingPCMPlayer";
 export type { StreamingPCMPlayerOptions } from "./voice-agent/StreamingPCMPlayer";
 export type {

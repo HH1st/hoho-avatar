@@ -1,4 +1,4 @@
-import { AudioClipPlayer, StreamingPCMPlayer, StreamingTTSPlayer, TalkingSprite, VuiRuntime } from "../../src";
+import { AudioClipPlayer, StreamingPCMPlayer, StreamingTTSPlayer, TalkingSprite, VuiClient } from "../../src";
 import type { AudioClipMetadata, CharacterDefinition, CharacterState } from "../../src";
 import { loadCharacterPackage, type LoadedCharacterPackage } from "./characterPackage";
 import "./style.css";
@@ -67,7 +67,7 @@ let ttsPlayer: StreamingTTSPlayer | undefined;
 let ttsPlaybackStarted = false;
 let kittenModule: Promise<typeof import("kitten-tts-webgpu")> | undefined;
 let ttsTextEdited = false;
-let voiceAgent: VuiRuntime | undefined;
+let voiceAgent: VuiClient | undefined;
 let agentPlayer: StreamingPCMPlayer | undefined;
 let agentTranscriptText = "";
 
@@ -491,7 +491,7 @@ async function startVoiceAgent() {
   const playbackSampleRate = agentPlayer.outputSampleRate;
   agentTranscriptText = "";
   privacyNotice.textContent = "Voice Agent sends microphone audio to Azure OpenAI";
-  voiceAgent = new VuiRuntime({
+  voiceAgent = new VuiClient({
     gatewayUrl: voiceAgentUrl(),
     onAudio: (pcm) => agentPlayer?.appendPCM16(pcm),
     onTranscriptDelta: (delta) => {
