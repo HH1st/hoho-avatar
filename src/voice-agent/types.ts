@@ -19,4 +19,6 @@ export interface VuiEvents {
 
 export interface VuiClientOptions extends VuiEvents {
   gatewayUrl: string;
+  /** Deadline for transport + session readiness. Default: 30 seconds. */
+  connectTimeoutMs?: number;
 }

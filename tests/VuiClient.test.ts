@@ -3,7 +3,9 @@ import { VuiClient } from "../src/voice-agent/VuiClient";
 import { base64ToPCM16, pcm16ToBase64, resampleFloat32ToPCM16 } from "../src/voice-agent/pcm";
 
 class FakeWebSocket {
+  static readonly CONNECTING = 0;
   static readonly OPEN = 1;
+  static readonly CLOSED = 3;
   static instance: FakeWebSocket;
   readyState = FakeWebSocket.OPEN;
   onerror: (() => void) | null = null;
@@ -13,7 +15,7 @@ class FakeWebSocket {
   readonly close = vi.fn();
 
   constructor(readonly url: string) { FakeWebSocket.instance = this; }
-  emit(event: object) { this.onmessage?.({ data: JSON.stringify(event) }); }
+  emit(event: unknown) { this.onmessage?.({ data: JSON.stringify(event) }); }
 }
 
 async function connect(client: VuiClient): Promise<FakeWebSocket> {
@@ -28,6 +30,23 @@ async function connect(client: VuiClient): Promise<FakeWebSocket> {
 describe("VuiClient", () => {
   beforeEach(() => vi.stubGlobal("WebSocket", FakeWebSocket));
   afterEach(() => vi.unstubAllGlobals());
+
+  it("times out an unfinished session handshake and releases the socket for retry", async () => {
+    vi.useFakeTimers();
+    try {
+      const client = new VuiClient({ gatewayUrl: "ws://localhost/voice-agent", connectTimeoutMs: 50 });
+      const pending = client.connect();
+      const socket = FakeWebSocket.instance;
+      socket.emit({ type: "gateway.ready" });
+      const rejected = expect(pending).rejects.toThrow("timed out");
+      await vi.advanceTimersByTimeAsync(50);
+      await rejected;
+      expect(socket.close).toHaveBeenCalledOnce();
+      await connect(client);
+      expect(vi.getTimerCount()).toBe(0);
+      client.destroy();
+    } finally { vi.useRealTimers(); }
+  });
 
   it("sends session configuration to the backend runtime", async () => {
     const states: string[] = [];
@@ -102,6 +121,153 @@ describe("VuiClient", () => {
     expect(client.state).toBe("error");
     expect(states).toEqual(["connecting", "error"]);
     expect(onError).toHaveBeenCalledOnce();
+  });
+
+  it("settles a cancelled connection and allows immediate reconnect without stale callbacks", async () => {
+    const onError = vi.fn();
+    const onTranscriptDelta = vi.fn();
+    const client = new VuiClient({ gatewayUrl: "ws://localhost/voice-agent", onError, onTranscriptDelta });
+    let cancelled: Error | undefined;
+    void client.connect().catch((error: Error) => { cancelled = error; });
+    const oldSocket = FakeWebSocket.instance;
+    const staleMessage = oldSocket.onmessage!;
+    const staleClose = oldSocket.onclose!;
+    const staleError = oldSocket.onerror!;
+
+    client.disconnect();
+    const reconnected = connect(client);
+    const newSocket = FakeWebSocket.instance;
+    await Promise.resolve();
+    expect(cancelled?.name).toBe("AbortError");
+    expect(newSocket).not.toBe(oldSocket);
+    await reconnected;
+
+    staleMessage({ data: JSON.stringify({ type: "gateway.ready" }) });
+    staleMessage({ data: JSON.stringify({ type: "output.transcript.delta", delta: "obsolete" }) });
+    staleMessage({ data: JSON.stringify({ type: "error", message: "obsolete" }) });
+    staleClose({ code: 1006 });
+    staleError();
+    expect(client.state).toBe("connected");
+    expect(newSocket.send).toHaveBeenCalledOnce();
+    expect(onTranscriptDelta).not.toHaveBeenCalled();
+    expect(onError).not.toHaveBeenCalled();
+    expect(oldSocket.close).toHaveBeenCalledOnce();
+    client.destroy();
+  });
+
+  it("shares the pending handshake and rejects it when the socket closes early", async () => {
+    const onError = vi.fn();
+    const client = new VuiClient({ gatewayUrl: "ws://localhost/voice-agent", onError });
+    const pending = client.connect();
+    expect(client.connect()).toBe(pending);
+    const socket = FakeWebSocket.instance;
+    socket.readyState = FakeWebSocket.CLOSED;
+    socket.onclose?.({ code: 1006 });
+    await expect(pending).rejects.toThrow("1006");
+    expect(onError).toHaveBeenCalledOnce();
+    expect(client.state).toBe("error");
+    await connect(client);
+    client.destroy();
+  });
+
+  it("can cancel from the connecting state callback before the transport opens", async () => {
+    const client = new VuiClient({
+      gatewayUrl: "ws://localhost/voice-agent",
+      onStateChange: (state) => {
+        if (state === "connecting") {
+          FakeWebSocket.instance.readyState = FakeWebSocket.CONNECTING;
+          client.disconnect();
+        }
+      },
+    });
+    await expect(client.connect()).rejects.toMatchObject({ name: "AbortError" });
+    expect(FakeWebSocket.instance.close).toHaveBeenCalledOnce();
+    expect(client.state).toBe("idle");
+  });
+
+  it("returns to idle after remote close and opens a fresh connection", async () => {
+    const client = new VuiClient({ gatewayUrl: "ws://localhost/voice-agent" });
+    const socket = await connect(client);
+    socket.readyState = FakeWebSocket.CLOSED;
+    socket.onclose?.({ code: 1000 });
+    expect(client.state).toBe("idle");
+    expect(await connect(client)).not.toBe(socket);
+    client.destroy();
+  });
+
+  it("settles pending connect on destroy and ignores late session readiness", async () => {
+    const client = new VuiClient({ gatewayUrl: "ws://localhost/voice-agent" });
+    let cancelled: Error | undefined;
+    void client.connect().catch((error: Error) => { cancelled = error; });
+    const staleMessage = FakeWebSocket.instance.onmessage!;
+    client.destroy();
+    staleMessage({ data: JSON.stringify({ type: "session.ready" }) });
+    await Promise.resolve();
+    expect(cancelled?.name).toBe("AbortError");
+    expect(client.state).toBe("destroyed");
+    expect(() => client.connect()).toThrow("destroyed");
+  });
+
+  it("preserves gateway authentication errors and releases the failed socket", async () => {
+    const onError = vi.fn();
+    const client = new VuiClient({ gatewayUrl: "ws://localhost/voice-agent", onError });
+    let failure: Error | undefined;
+    void client.connect().catch((error: Error) => { failure = error; });
+    const socket = FakeWebSocket.instance;
+    socket.emit({ type: "gateway.error", message: "Azure authentication failed" });
+    await Promise.resolve();
+    expect(failure?.message).toBe("Azure authentication failed");
+    expect(client.state).toBe("error");
+    expect(onError).toHaveBeenCalledOnce();
+    expect(socket.close).toHaveBeenCalledOnce();
+    await connect(client);
+    client.destroy();
+  });
+
+  it("releases an established socket on transport failure and permits retry", async () => {
+    const onError = vi.fn();
+    const client = new VuiClient({ gatewayUrl: "ws://localhost/voice-agent", onError });
+    const socket = await connect(client);
+    socket.onerror?.();
+    expect(client.state).toBe("error");
+    expect(onError).toHaveBeenCalledOnce();
+    expect(socket.close).toHaveBeenCalledOnce();
+    await connect(client);
+    client.destroy();
+  });
+
+  it("ignores malformed messages and audio without breaking later output", async () => {
+    const onAudio = vi.fn();
+    const onTranscriptDelta = vi.fn();
+    const client = new VuiClient({ gatewayUrl: "ws://localhost/voice-agent", onAudio, onTranscriptDelta });
+    const socket = await connect(client);
+    for (const event of [null, [], 7, "text", {}, { type: 1 },
+      { type: "output.transcript.delta", delta: 42 },
+      { type: "output.audio.delta", audio: {} },
+      { type: "output.audio.delta", audio: "not base64!" },
+      { type: "output.audio.delta", audio: "AA==" }]) {
+      expect(() => socket.emit(event)).not.toThrow();
+    }
+    socket.onmessage?.({ data: "{" });
+    const pcm = new Int16Array([1, -2]);
+    socket.emit({ type: "output.audio.delta", audio: pcm16ToBase64(pcm) });
+    socket.emit({ type: "output.transcript.delta", delta: "valid" });
+    expect(client.state).toBe("connected");
+    expect(onAudio).toHaveBeenCalledExactlyOnceWith(pcm);
+    expect(onTranscriptDelta).toHaveBeenCalledExactlyOnceWith("valid");
+    client.destroy();
+  });
+
+  it("reports a WebSocket constructor failure and allows retry", async () => {
+    const onError = vi.fn();
+    const client = new VuiClient({ gatewayUrl: "ws://localhost/voice-agent", onError });
+    vi.stubGlobal("WebSocket", class { constructor() { throw new Error("Invalid WebSocket URL"); } });
+    await expect(client.connect()).rejects.toThrow("Invalid WebSocket URL");
+    expect(client.state).toBe("error");
+    expect(onError).toHaveBeenCalledOnce();
+    vi.stubGlobal("WebSocket", FakeWebSocket);
+    await connect(client);
+    client.destroy();
   });
 });
 

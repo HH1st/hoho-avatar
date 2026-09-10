@@ -62,6 +62,8 @@ Select a character and press **START MIC** for live input, **TRY SAMPLE VOICE** 
 
 The demo accepts a `.zip` containing one V1 character directory. Select **LOAD AVATAR ZIP** or drop the archive onto the avatar stage; the package is validated, unpacked, and rendered entirely inside the browser.
 
+Imports are limited to 25 MB compressed, 75 MB of extracted character files, and 1,024 archive entries. Sizes are checked before and during extraction; duplicate asset paths are rejected.
+
 ```text
 my-character.zip
 └── my-character/
@@ -187,16 +189,21 @@ The demo can also run a full-duplex voice conversation through Azure OpenAI Real
 
 The gateway runtime uses three continuously running asynchronous loops separated by two queues. The Input Loop normalizes browser and Realtime events into the input queue; the Process Loop transforms those events and places browser-facing events in the output queue; the Output Loop independently delivers audio, transcript, and interruption events. Each response is tagged with a generation so output arriving after an interruption is discarded. The browser remains a thin input/output adapter, and avatar rendering only consumes the PCM that is actually played.
 
-Give the deployed identity the Azure OpenAI inference role for the resource, then run the two processes:
+Give the deployed identity the Azure OpenAI inference role for the resource, then start the frontend and gateway together:
 
 ```bash
-npm run dev:voice-agent
-npm run dev
+npm run dev:all
 ```
+
+The launcher checks gateway health before starting Vite and reuses an already running gateway. Ctrl+C stops the services it owns. The frontend defaults to port 5173 (override with `PORT`); its gateway proxy follows `VOICE_AGENT_HOST` and `VOICE_AGENT_PORT` from `.env`. You can still run `npm run dev` and `npm run dev:voice-agent` separately.
 
 Production uses system-assigned Managed Identity by default. Set `AZURE_CLIENT_ID` for a user-assigned identity. For local development only, copy `.env.example` to `.env`, set `AZURE_USE_DEFAULT_CREDENTIAL=1`, and authenticate with `az login`; this mode uses `AzureCliCredential` explicitly. Set `VOICE_AGENT_ALLOWED_ORIGINS` to the deployed site origin before exposing the gateway publicly.
 
 Local Vite development connects through the built-in `/voice-agent` proxy. Static production builds, including the GitHub Pages demo, disable the Voice Agent tab unless `VITE_VOICE_AGENT_URL` is explicitly set to a deployed `wss://` gateway URL.
+
+Calling `VuiClient.disconnect()` or `destroy()` while `connect()` is pending rejects that promise with an `AbortError`. Treat it as an intentional cancellation; a disconnected client can connect again immediately. Messages from the previous socket are ignored.
+
+Session setup has a 30-second deadline (`connectTimeoutMs` can override it). The demo checks local gateway health, permits cancellation during authentication or microphone permission, and releases capture and playback on disconnect or failure. **RETRY CONNECTION** starts a new conversation; previous conversation history is not restored. The speaking indicator stays active until queued audio finishes, and **INTERRUPT** immediately stops local playback while notifying the gateway.
 
 The source entry point exports:
 
@@ -304,6 +311,15 @@ npm run typecheck  # Type-check source, examples, and tests
 npm test           # Run deterministic engine and audio-player tests
 npm run build      # Build the browser demo
 ```
+
+Browser regression tests use Chromium with synthetic microphone input and a simulated gateway; they do not contact Azure or require credentials:
+
+```bash
+npx playwright install chromium
+npm run test:e2e
+```
+
+These tests cover repeated start/end, cancellation, delayed permissions, connection loss and retry, playback interruption, natural playback completion, and provider switching. CI runs both the unit suite and the browser suite. Real Azure, device microphone, and WebGPU TTS behavior still require integration testing on the target device.
 
 Project layout:
 

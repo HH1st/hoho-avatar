@@ -2,10 +2,10 @@ import { base64ToPCM16, pcm16ToBase64, resampleFloat32ToPCM16 } from "./pcm";
 import type { VuiClientOptions, VuiSessionOptions, VuiState } from "./types";
 
 interface ServerEvent {
-  type?: string;
-  audio?: string;
-  delta?: string;
-  message?: string;
+  type: string;
+  audio?: unknown;
+  delta?: unknown;
+  message?: unknown;
 }
 
 /** Thin browser adapter for the backend VUI runtime. */
@@ -13,6 +13,7 @@ export class VuiClient {
   private socket?: WebSocket;
   private currentState: VuiState = "idle";
   private connectPromise?: Promise<void>;
+  private cancelConnect?: () => void;
 
   constructor(private readonly options: VuiClientOptions) {}
 
@@ -24,61 +25,75 @@ export class VuiClient {
     this.assertActive();
     if (this.currentState === "connected") return Promise.resolve();
     if (this.connectPromise) return this.connectPromise;
-    this.setState("connecting");
-
-    let socket: WebSocket;
+    let resolveConnection!: () => void;
+    let rejectConnection!: (error: Error) => void;
     const operation = new Promise<void>((resolve, reject) => {
+      resolveConnection = resolve;
+      rejectConnection = reject;
+    });
+    this.connectPromise = operation;
+    let timeout: ReturnType<typeof setTimeout> | undefined;
+    const settle = (error?: Error) => {
+      if (this.connectPromise !== operation) return;
+      clearTimeout(timeout);
+      this.connectPromise = undefined;
+      this.cancelConnect = undefined;
+      if (error) rejectConnection(error);
+      else resolveConnection();
+    };
+    this.cancelConnect = () => settle(new DOMException("VUI connection was cancelled", "AbortError"));
+
+    let socket: WebSocket | undefined;
+    const fail = (error: Error) => {
+      if (this.socket !== socket) return;
+      this.releaseSocket();
+      settle(error);
+      this.setState("error");
+      this.options.onError?.(error);
+    };
+
+    try {
       socket = new WebSocket(this.options.gatewayUrl);
       this.socket = socket;
-      let settled = false;
-      const fail = (error: Error) => {
-        if (settled) return;
-        settled = true;
-        if (this.socket === socket) this.socket = undefined;
-        this.setState("error");
-        this.options.onError?.(error);
-        reject(error);
-      };
-
+      timeout = setTimeout(() => fail(new Error("VUI connection timed out. Please retry.")), this.options.connectTimeoutMs ?? 30_000);
       socket.onerror = () => fail(new Error("Unable to connect to the VUI gateway"));
       socket.onclose = (event) => {
         if (this.socket !== socket) return;
-        this.socket = undefined;
-        if (!settled) fail(new Error(`VUI gateway closed (${event.code})`));
-        else if (this.currentState !== "destroyed" && this.currentState !== "error") this.setState("idle");
+        if (this.connectPromise === operation) fail(new Error(`VUI gateway closed (${event.code})`));
+        else {
+          this.releaseSocket();
+          this.setState("idle");
+        }
       };
       socket.onmessage = (message) => {
-        let event: ServerEvent;
-        try { event = JSON.parse(String(message.data)) as ServerEvent; } catch { return; }
+        if (this.socket !== socket) return;
+        let parsed: unknown;
+        try { parsed = JSON.parse(String(message.data)); } catch { return; }
+        if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)
+          || !("type" in parsed) || typeof parsed.type !== "string") return;
+        const event = parsed as ServerEvent;
         if (event.type === "gateway.ready") {
           this.send({ type: "session.configure", ...session });
           return;
         }
         if (event.type === "session.ready") {
-          if (!settled) {
-            settled = true;
+          if (this.connectPromise === operation) {
+            settle();
             this.setState("connected");
-            resolve();
           }
           return;
         }
-        if (event.type === "error") {
-          const error = new Error(event.message ?? "VUI request failed");
-          if (!settled) fail(error);
-          else {
-            this.setState("error");
-            this.options.onError?.(error);
-          }
+        if (event.type === "error" || event.type === "gateway.error") {
+          fail(new Error(typeof event.message === "string" ? event.message : "VUI request failed"));
           return;
         }
-        this.deliver(event);
+        if (this.currentState === "connected") this.deliver(event);
       };
-    });
-    const tracked = operation.finally(() => {
-      if (this.connectPromise === tracked) this.connectPromise = undefined;
-    });
-    this.connectPromise = tracked;
-    return tracked;
+      this.setState("connecting");
+    } catch (error) {
+      fail(error instanceof Error ? error : new Error("Unable to create the VUI connection"));
+    }
+    return operation;
   }
 
   sendAudio(chunk: Float32Array, sampleRate: number): void {
@@ -97,10 +112,21 @@ export class VuiClient {
   }
 
   disconnect(): void {
+    this.cancelConnect?.();
+    this.releaseSocket();
+    if (this.currentState !== "destroyed") this.setState("idle");
+  }
+
+  private releaseSocket(): void {
     const socket = this.socket;
     this.socket = undefined;
-    socket?.close(1000, "Client disconnected");
-    if (this.currentState !== "destroyed") this.setState("idle");
+    if (!socket) return;
+    socket.onmessage = null;
+    socket.onclose = null;
+    socket.onerror = null;
+    if (socket.readyState === WebSocket.CONNECTING || socket.readyState === WebSocket.OPEN) {
+      socket.close(1000, "Client disconnected");
+    }
   }
 
   destroy(): void {
@@ -111,11 +137,15 @@ export class VuiClient {
 
   private deliver(event: ServerEvent): void {
     switch (event.type) {
-      case "output.audio.delta":
-        if (event.audio) this.options.onAudio?.(base64ToPCM16(event.audio));
+      case "output.audio.delta": {
+        if (typeof event.audio !== "string" || !event.audio) return;
+        let pcm: Int16Array;
+        try { pcm = base64ToPCM16(event.audio); } catch { return; }
+        this.options.onAudio?.(pcm);
         break;
+      }
       case "output.transcript.delta":
-        if (event.delta) this.options.onTranscriptDelta?.(event.delta);
+        if (typeof event.delta === "string" && event.delta) this.options.onTranscriptDelta?.(event.delta);
         break;
       case "input.speech.started": this.options.onUserSpeechStart?.(); break;
       case "input.speech.stopped": this.options.onUserSpeechEnd?.(); break;

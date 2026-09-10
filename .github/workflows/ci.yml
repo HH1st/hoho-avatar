@@ -28,6 +28,14 @@ jobs:
       - run: npm run typecheck
       - run: npm test
       - run: npm run build
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: browser-test-results
+          path: test-results/
+          if-no-files-found: ignore
       - run: python skills/generate-talking-sprite-character/scripts/validate_character.py public/characters/niu-lai/character.json
       - run: python skills/generate-talking-sprite-character/scripts/validate_character.py public/characters/pixel-bot/character.json
       - run: python skills/generate-talking-sprite-character/scripts/validate_character.py public/characters/pixel-portrait/character.json

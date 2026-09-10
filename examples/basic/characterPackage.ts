@@ -1,10 +1,15 @@
-import { strFromU8, unzipSync } from "fflate";
+import { strFromU8, unzipSync, Unzip, UnzipInflate } from "fflate";
 import { parseCharacterDefinition } from "../../src";
 import type { CharacterDefinition, MouthState } from "../../src";
 
 const MAX_ZIP_BYTES = 25 * 1024 * 1024;
 const MAX_EXTRACTED_BYTES = 75 * 1024 * 1024;
+const MAX_ZIP_ENTRIES = 1024;
+// Bound each inflate call, even if the archive lies about uncompressed sizes.
+const ZIP_CHUNK_BYTES = 1024;
 const mouthStates: MouthState[] = ["closed", "small", "large", "wide", "round"];
+
+class CharacterArchiveError extends Error {}
 
 interface PackageFile {
   name: string;
@@ -33,7 +38,7 @@ function normalizeZipPath(path: string): string {
   for (const part of path.replaceAll("\\", "/").split("/")) {
     if (!part || part === ".") continue;
     if (part === "..") {
-      if (!parts.length) throw new Error(`Asset path escapes the character folder: ${path}`);
+      if (!parts.length) throw new CharacterArchiveError(`Asset path escapes the character folder: ${path}`);
       parts.pop();
     } else {
       parts.push(part);
@@ -56,26 +61,84 @@ function mimeType(path: string): string {
   return "application/octet-stream";
 }
 
+async function extractCharacterFiles(bytes: Uint8Array): Promise<Map<string, Uint8Array>> {
+  const files = new Map<string, Uint8Array>();
+  const entries = new Map<string, string | undefined>();
+  const paths = new Set<string>();
+  let declaredBytes = 0;
+  let extractedBytes = 0;
+  const sizeError = () => new CharacterArchiveError("Extracted character files are larger than 75 MB.");
+
+  try {
+    // Read the central directory without allocating any decompressed payloads.
+    // This also rejects archives with missing or truncated directory records.
+    unzipSync(bytes, { filter: (entry) => {
+      if (entries.size >= MAX_ZIP_ENTRIES) throw new CharacterArchiveError("The ZIP contains too many entries (maximum 1024).");
+      if (entries.has(entry.name)) throw new CharacterArchiveError(`Duplicate ZIP entry: ${entry.name}`);
+      const path = normalizeZipPath(entry.name);
+      const ignored = !path || /[\\/]$/.test(entry.name) || path.startsWith("__MACOSX/")
+        || path.split("/").some((part) => part.startsWith("."));
+      entries.set(entry.name, ignored ? undefined : path);
+      if (!ignored) {
+        if (paths.has(path)) throw new CharacterArchiveError(`Duplicate asset path: ${path}`);
+        paths.add(path);
+        declaredBytes += entry.originalSize;
+        if (!Number.isSafeInteger(declaredBytes) || declaredBytes > MAX_EXTRACTED_BYTES) throw sizeError();
+      }
+      return false;
+    } });
+
+    const seen = new Set<string>();
+    const unzip = new Unzip((entry) => {
+      if (!entries.has(entry.name) || seen.has(entry.name)) throw new Error("Inconsistent ZIP directory");
+      seen.add(entry.name);
+      const path = entries.get(entry.name);
+      if (path === undefined) return;
+      if (entry.originalSize !== undefined && entry.originalSize > MAX_EXTRACTED_BYTES - extractedBytes) throw sizeError();
+      const chunks: Uint8Array[] = [];
+      let length = 0;
+      entry.ondata = (error, chunk, final) => {
+        if (error) throw error;
+        extractedBytes += chunk.byteLength;
+        if (extractedBytes > MAX_EXTRACTED_BYTES) throw sizeError();
+        chunks.push(chunk);
+        length += chunk.byteLength;
+        if (final) {
+          const data = new Uint8Array(length);
+          let offset = 0;
+          for (const part of chunks) { data.set(part, offset); offset += part.byteLength; }
+          chunks.length = 0;
+          files.set(path, data);
+        }
+      };
+      entry.start();
+    });
+    unzip.register(UnzipInflate);
+    let lastYield = performance.now();
+    for (let offset = 0; offset < bytes.length; offset += ZIP_CHUNK_BYTES) {
+      const end = Math.min(offset + ZIP_CHUNK_BYTES, bytes.length);
+      unzip.push(bytes.subarray(offset, end), end === bytes.length);
+      // Let the browser paint and handle input during larger imports.
+      if (end < bytes.length && performance.now() - lastYield >= 8) {
+        await new Promise<void>((resolve) => setTimeout(resolve, 0));
+        lastYield = performance.now();
+      }
+    }
+    if (seen.size !== entries.size || files.size !== paths.size) throw new Error("Incomplete ZIP archive");
+  } catch (error) {
+    if (error instanceof CharacterArchiveError) throw error;
+    throw new Error("The ZIP could not be opened. Make sure it is a valid, unencrypted archive.");
+  }
+  return files;
+}
+
 export async function loadCharacterPackage(file: PackageFile, objectUrls: ObjectUrlApi = browserObjectUrls): Promise<LoadedCharacterPackage> {
   if (!file.name.toLowerCase().endsWith(".zip")) throw new Error("Choose a .zip character package.");
   if (file.size > MAX_ZIP_BYTES) throw new Error("Character ZIP is larger than 25 MB.");
 
-  let entries: Record<string, Uint8Array>;
-  try {
-    entries = unzipSync(new Uint8Array(await file.arrayBuffer()));
-  } catch {
-    throw new Error("The ZIP could not be opened. Make sure it is a valid, unencrypted archive.");
-  }
-
-  const files = new Map<string, Uint8Array>();
-  let extractedBytes = 0;
-  for (const [rawPath, bytes] of Object.entries(entries)) {
-    const path = normalizeZipPath(rawPath);
-    if (!path || path.startsWith("__MACOSX/") || path.split("/").some((part) => part.startsWith("."))) continue;
-    extractedBytes += bytes.byteLength;
-    if (extractedBytes > MAX_EXTRACTED_BYTES) throw new Error("Extracted character files are larger than 75 MB.");
-    files.set(path, bytes);
-  }
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  if (bytes.byteLength > MAX_ZIP_BYTES) throw new Error("Character ZIP is larger than 25 MB.");
+  const files = await extractCharacterFiles(bytes);
 
   const configs = [...files.keys()].filter((path) => path.split("/").at(-1)?.toLowerCase() === "character.json");
   if (configs.length !== 1) throw new Error(configs.length ? "The ZIP contains more than one character.json." : "The ZIP does not contain character.json.");

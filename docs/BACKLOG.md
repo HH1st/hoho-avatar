@@ -5,7 +5,7 @@
 - move microphone capture from `ScriptProcessorNode` to a 20 ms `AudioWorklet`;
 - add a production deployment example for the Managed Identity gateway;
 - add tool-call handling and explicit tool authorization boundaries;
-- add reconnect and conversation restoration policies;
+- add automatic reconnect and conversation restoration policies (manual retry starts a fresh session today);
 - replace the browser-to-gateway WebSocket with WebRTC when the Azure deployment supports the required server-side control pattern.
 
 This document records work that is intentionally outside the current source-first release. Hoho Avatar is not currently distributed as an npm package. Users clone the repository, install development dependencies, and run or build the source locally.

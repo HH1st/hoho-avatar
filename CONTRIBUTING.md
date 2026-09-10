@@ -21,6 +21,8 @@ Before opening a pull request, run:
 npm run typecheck
 npm test
 npm run build
+npx playwright install chromium
+npm run test:e2e
 python skills/generate-talking-sprite-character/scripts/validate_character.py public/characters/pixel-bot/character.json
 python skills/generate-talking-sprite-character/scripts/validate_character.py public/characters/pixel-portrait/character.json
 ```

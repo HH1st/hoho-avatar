@@ -1,6 +1,13 @@
 import WebSocket from "ws";
 import { AsyncQueue } from "./async-queue.mjs";
 
+function parseEvent(data) {
+  try {
+    const event = JSON.parse(data.toString());
+    if (event !== null && typeof event === "object" && !Array.isArray(event) && typeof event.type === "string") return event;
+  } catch { /* Ignore malformed protocol messages. */ }
+}
+
 /** Three-loop backend runtime for one browser ↔ Realtime session. */
 export class VuiRuntime {
   #inputQueue = new AsyncQueue();
@@ -18,7 +25,9 @@ export class VuiRuntime {
   }
 
   async run() {
+    if (this.#stopped || this.client.readyState !== WebSocket.OPEN || this.backend.readyState !== WebSocket.OPEN) return;
     await this.#sendClient({ type: "gateway.ready" });
+    if (this.#stopped || this.client.readyState !== WebSocket.OPEN || this.backend.readyState !== WebSocket.OPEN) return;
     await Promise.all([this.#inputLoop(), this.#processLoop(), this.#outputLoop()]);
   }
 
@@ -40,16 +49,15 @@ export class VuiRuntime {
       };
       this.client.on("message", (data, isBinary) => {
         if (isBinary) return;
-        let event;
-        try { event = JSON.parse(data.toString()); } catch { return; }
+        const event = parseEvent(data);
+        if (!event) return;
         const normalized = this.#normalizeClientInput(event);
         if (normalized) this.#inputQueue.push(normalized, normalized.type === "interrupt");
       });
       this.backend.on("message", (data, isBinary) => {
         if (isBinary) return;
-        try {
-          this.#inputQueue.push({ source: "backend", event: JSON.parse(data.toString()) });
-        } catch { /* Ignore malformed backend events. */ }
+        const event = parseEvent(data);
+        if (event) this.#inputQueue.push({ source: "backend", event });
       });
       this.client.once("close", finish);
       this.client.once("error", finish);
@@ -117,11 +125,11 @@ export class VuiRuntime {
           break;
         }
         case "response.output_audio.delta":
-          if (event.delta) this.#outputQueue.push({ type: "output.audio.delta", audio: event.delta, generation: this.#eventGeneration(event) });
+          if (typeof event.delta === "string" && event.delta) this.#outputQueue.push({ type: "output.audio.delta", audio: event.delta, generation: this.#eventGeneration(event) });
           break;
         case "response.output_audio_transcript.delta":
         case "response.output_text.delta":
-          if (event.delta) this.#outputQueue.push({ type: "output.transcript.delta", delta: event.delta, generation: this.#eventGeneration(event) });
+          if (typeof event.delta === "string" && event.delta) this.#outputQueue.push({ type: "output.transcript.delta", delta: event.delta, generation: this.#eventGeneration(event) });
           break;
         case "input_audio_buffer.speech_started":
           this.#invalidateOutput();

@@ -1,4 +1,4 @@
-import { strToU8, unzipSync, zipSync } from "fflate";
+import { strToU8, unzipSync, zipSync, Zip, ZipDeflate } from "fflate";
 import { describe, expect, it } from "vitest";
 import { loadCharacterPackage } from "../examples/basic/characterPackage";
 
@@ -31,7 +31,40 @@ function packageFile(overrides: Record<string, Uint8Array> = {}) {
     ...overrides,
   };
   const bytes = zipSync(files);
+  return archiveFile(bytes);
+}
+
+function archiveFile(bytes: Uint8Array) {
   return { name: "avatar.zip", size: bytes.byteLength, arrayBuffer: async () => bytes.slice().buffer };
+}
+
+// Change only size metadata; the compressed payload remains small.
+function setDeclaredSize(bytes: Uint8Array, size: number) {
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  for (let offset = 0; offset + 4 <= bytes.length; offset += 1) {
+    const signature = view.getUint32(offset, true);
+    if (signature === 0x04034b50) view.setUint32(offset + 22, size, true);
+    if (signature === 0x02014b50) view.setUint32(offset + 24, size, true);
+  }
+  return bytes;
+}
+
+function streamedArchive(files: Record<string, Uint8Array>, repeat = 1) {
+  const chunks: Uint8Array[] = [];
+  const zip = new Zip((error, data) => {
+    if (error) throw error;
+    chunks.push(data);
+  });
+  for (const [path, data] of Object.entries(files)) {
+    const entry = new ZipDeflate(path);
+    zip.add(entry);
+    for (let index = 0; index < repeat; index += 1) entry.push(data, index === repeat - 1);
+  }
+  zip.end();
+  const bytes = new Uint8Array(chunks.reduce((total, chunk) => total + chunk.length, 0));
+  let offset = 0;
+  for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.length; }
+  return bytes;
 }
 
 describe("loadCharacterPackage", () => {
@@ -59,6 +92,65 @@ describe("loadCharacterPackage", () => {
   it("rejects packages without character.json", async () => {
     const bytes = zipSync({ "avatar/body.png": new Uint8Array([1]) });
     await expect(loadCharacterPackage({ name: "avatar.zip", size: bytes.byteLength, arrayBuffer: async () => bytes.slice().buffer })).rejects.toThrow("does not contain character.json");
+  });
+
+  it("accepts streamed archives whose local headers omit original sizes", async () => {
+    const files = unzipSync(new Uint8Array(await packageFile().arrayBuffer()));
+    const loaded = await loadCharacterPackage(archiveFile(streamedArchive(files)), { create: () => "blob:test", revoke: () => undefined });
+    expect(loaded.name).toBe("avatar");
+    loaded.dispose();
+  });
+
+  it("accepts stored entries and ignores directory and metadata payloads", async () => {
+    const files = unzipSync(new Uint8Array(await packageFile().arrayBuffer()));
+    files["avatar/"] = new Uint8Array();
+    files["__MACOSX/ignored"] = new Uint8Array(1);
+    files["avatar/.DS_Store"] = new Uint8Array(1);
+    const bytes = zipSync(files, { level: 0 });
+    const loaded = await loadCharacterPackage(archiveFile(bytes), { create: () => "blob:test", revoke: () => undefined });
+    expect(loaded.name).toBe("avatar");
+    loaded.dispose();
+  });
+
+  it("rejects an oversized declaration before attempting to decompress its payload", async () => {
+    const bytes = setDeclaredSize(zipSync({ "large.png": new Uint8Array(1) }), 75 * 1024 * 1024 + 1);
+    // An unsupported compression type would fail if extraction started.
+    const view = new DataView(bytes.buffer);
+    view.setUint16(8, 99, true);
+    for (let offset = 0; offset + 4 <= bytes.length; offset += 1) {
+      if (view.getUint32(offset, true) === 0x02014b50) view.setUint16(offset + 10, 99, true);
+    }
+    await expect(loadCharacterPackage(archiveFile(bytes))).rejects.toThrow("75 MB");
+  });
+
+  it("enforces the declared size limit across multiple entries", async () => {
+    const bytes = setDeclaredSize(zipSync({ "a.png": new Uint8Array(1), "b.png": new Uint8Array(1) }), 40 * 1024 * 1024);
+    await expect(loadCharacterPackage(archiveFile(bytes))).rejects.toThrow("75 MB");
+  });
+
+  it("limits actual streamed output even when archive size metadata is understated", async () => {
+    const bytes = setDeclaredSize(streamedArchive({ "large.png": new Uint8Array(1024 * 1024) }, 76), 1);
+    expect(bytes.length).toBeLessThan(25 * 1024 * 1024);
+    await expect(loadCharacterPackage(archiveFile(bytes))).rejects.toThrow("75 MB");
+  });
+
+  it("rejects duplicate normalized paths instead of silently replacing assets", async () => {
+    await expect(loadCharacterPackage(packageFile({ "avatar/./body.png": new Uint8Array([1]) }))).rejects.toThrow("Duplicate");
+  });
+
+  it("rejects archives with excessive entry counts", async () => {
+    const files = Object.fromEntries(Array.from({ length: 1025 }, (_, index) => [`file-${index}`, new Uint8Array()]));
+    await expect(loadCharacterPackage(archiveFile(zipSync(files)))).rejects.toThrow("too many entries");
+  });
+
+  it("checks the actual compressed buffer size as well as the file metadata", async () => {
+    const file = { ...archiveFile(new Uint8Array(25 * 1024 * 1024 + 1)), size: 1 };
+    await expect(loadCharacterPackage(file)).rejects.toThrow("25 MB");
+  });
+
+  it("rejects a truncated archive", async () => {
+    const bytes = new Uint8Array(await packageFile().arrayBuffer());
+    await expect(loadCharacterPackage(archiveFile(bytes.subarray(0, bytes.length - 22)))).rejects.toThrow("ZIP could not be opened");
   });
 });
 

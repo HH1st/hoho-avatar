@@ -17,6 +17,8 @@ export class StreamingPCMPlayer {
 
   constructor(private readonly options: StreamingPCMPlayerOptions = {}) {}
 
+  get active(): boolean { return this.sources.size > 0; }
+
   /** Sample rate of PCM emitted by the playback AudioWorklet. */
   get outputSampleRate(): number {
     return this.context.sampleRate;

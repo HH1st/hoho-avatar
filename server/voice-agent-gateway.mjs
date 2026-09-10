@@ -1,7 +1,7 @@
 import { createServer } from "node:http";
 import { AzureCliCredential, ManagedIdentityCredential } from "@azure/identity";
 import WebSocket, { WebSocketServer } from "ws";
-import { VuiRuntime } from "./vui-runtime.mjs";
+import { runGatewaySession } from "./gateway-session.mjs";
 
 const port = Number(process.env.VOICE_AGENT_PORT ?? 8787);
 const host = process.env.VOICE_AGENT_HOST ?? "127.0.0.1";
@@ -27,35 +27,12 @@ function azureRealtimeUrl() {
   return url.href;
 }
 
-async function createAzureSocket() {
-  const accessToken = await credential.getToken("https://cognitiveservices.azure.com/.default");
+async function createAzureSocket(signal) {
+  const accessToken = await credential.getToken("https://cognitiveservices.azure.com/.default", { abortSignal: signal });
+  signal.throwIfAborted();
   if (!accessToken?.token) throw new Error("Managed Identity did not return an Azure OpenAI access token");
   return new WebSocket(azureRealtimeUrl(), {
     headers: { Authorization: `Bearer ${accessToken.token}` },
-  });
-}
-
-function waitForAzureSocket(socket, timeoutMs = 15_000) {
-  return new Promise((resolve, reject) => {
-    const timeout = setTimeout(() => {
-      socket.terminate();
-      reject(new Error(`Azure Realtime handshake timed out after ${timeoutMs / 1000}s`));
-    }, timeoutMs);
-    const cleanup = () => {
-      clearTimeout(timeout);
-      socket.off("open", handleOpen);
-      socket.off("error", handleError);
-      socket.off("unexpected-response", handleUnexpectedResponse);
-    };
-    const handleOpen = () => { cleanup(); resolve(); };
-    const handleError = (error) => { cleanup(); reject(error); };
-    const handleUnexpectedResponse = (_request, response) => {
-      cleanup();
-      reject(new Error(`Azure Realtime handshake failed with HTTP ${response.statusCode}`));
-    };
-    socket.once("open", handleOpen);
-    socket.once("error", handleError);
-    socket.once("unexpected-response", handleUnexpectedResponse);
   });
 }
 
@@ -84,33 +61,11 @@ const clients = new WebSocketServer({
   path: "/voice-agent",
   verifyClient: ({ origin }, done) => done(originAllowed(origin), 403, "Origin is not allowed"),
 });
-clients.on("connection", async (client) => {
-  let upstream;
-  const closeBoth = (code = 1011, reason = "Voice Agent connection closed") => {
-    if (client.readyState === WebSocket.OPEN) client.close(code, reason);
-    if (upstream?.readyState === WebSocket.OPEN || upstream?.readyState === WebSocket.CONNECTING) upstream.close();
-  };
-
-  try {
-    upstream = await createAzureSocket();
-    await waitForAzureSocket(upstream);
-  } catch (error) {
-    if (client.readyState === WebSocket.OPEN) {
-      client.send(JSON.stringify({ type: "gateway.error", message: error instanceof Error ? error.message : "Azure authentication failed" }));
-    }
-    closeBoth(1011, "Azure authentication failed");
-    return;
-  }
-
-  const runtime = new VuiRuntime(client, upstream);
-  try {
-    await runtime.run();
-    closeBoth(1000, "VUI session ended");
-  } catch (error) {
-    if (client.readyState === WebSocket.OPEN) client.send(JSON.stringify({ type: "error", message: error instanceof Error ? error.message : "VUI runtime failed" }));
-    runtime.stop();
-    closeBoth(1011, "VUI runtime failed");
-  }
+clients.on("connection", (client) => {
+  void runGatewaySession(client, createAzureSocket).catch((error) => {
+    console.error("Voice session cleanup failed:", error.message);
+    client.terminate();
+  });
 });
 
 server.listen(port, host, () => {
@@ -118,3 +73,8 @@ server.listen(port, host, () => {
   console.log(`Azure Realtime target: ${domain}${apiPath} (deployment: ${deployment})`);
   console.log(`Authentication: ${allowDeveloperCredential ? "Azure CLI (development)" : "Managed Identity"}`);
 });
+
+export async function closeGateway() {
+  for (const client of clients.clients) client.terminate();
+  await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
+}

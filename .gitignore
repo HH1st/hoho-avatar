@@ -25,6 +25,8 @@ msal_token_cache*
 *.pfx
 *.p12
 coverage/
+test-results/
+playwright-report/
 *.tgz
 .DS_Store
 Thumbs.db

@@ -83,6 +83,7 @@ describe("StreamingPCMPlayer", () => {
     await player.prepare();
     player.appendPCM16(new Int16Array(100));
     player.interrupt();
+    expect(player.active).toBe(false);
     expect(onPCM).not.toHaveBeenCalled();
     expect(context.sources[0]?.stop).toHaveBeenCalledOnce();
   });
@@ -94,9 +95,12 @@ describe("StreamingPCMPlayer", () => {
     player.appendPCM16(new Int16Array(100));
     player.appendPCM16(new Int16Array(100));
 
+    expect(player.active).toBe(true);
     context.sources[0]?.onended?.();
+    expect(player.active).toBe(true);
     expect(onPlaybackEnd).not.toHaveBeenCalled();
     context.sources[1]?.onended?.();
+    expect(player.active).toBe(false);
     expect(onPlaybackEnd).toHaveBeenCalledOnce();
   });
 });

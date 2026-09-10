@@ -23,6 +23,37 @@ async function waitFor(assertion) {
 }
 
 describe("backend VuiRuntime", () => {
+  it("ignores malformed input on both sockets and continues processing valid events", async () => {
+    const client = new FakeSocket();
+    const backend = new FakeSocket();
+    const runtime = new VuiRuntime(client, backend);
+    const running = runtime.run();
+    const outcome = running.catch((error) => error);
+    try {
+      await waitFor(() => expect(client.listenerCount("message")).toBe(1));
+      for (const socket of [client, backend]) {
+        for (const event of [null, [], 1, true, "text", {}, { type: null }]) {
+          expect(() => socket.emitJson(event)).not.toThrow();
+        }
+        socket.emit("message", Buffer.from("{"), false);
+        socket.emit("message", Buffer.from("null"), true);
+      }
+      client.emitJson({ type: "input.text", text: {} });
+      client.emitJson({ type: "input.audio", audio: 123 });
+      backend.emitJson({ type: "response.output_audio.delta", delta: {} });
+      backend.emitJson({ type: "response.output_text.delta", delta: 123 });
+      client.emitJson({ type: "input.text", text: " valid " });
+      backend.emitJson({ type: "session.updated" });
+      await waitFor(() => expect(client.sent).toContainEqual({ type: "session.ready" }));
+      expect(backend.sent.map((event) => event.type)).toEqual(["conversation.item.create", "response.create"]);
+      expect(backend.sent[0].item.content[0].text).toBe("valid");
+      expect(client.sent.map((event) => event.type)).toEqual(["gateway.ready", "session.ready"]);
+    } finally {
+      runtime.stop();
+      expect(await outcome).toBeUndefined();
+    }
+  });
+
   it("runs input, bidirectional processing, and output independently", async () => {
     const client = new FakeSocket();
     const backend = new FakeSocket();
