@@ -1,154 +1,126 @@
 <!doctype html>
-<html lang="zh-CN">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#080b14" />
-    <title>PIXEL VOICE // Hoho Avatar</title>
+    <meta name="theme-color" content="#101012" />
+    <meta name="description" content="Your voice. A presence. An expressive studio for audio-reactive avatars." />
+    <title>Hoho — Avatar Studio</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Space+Grotesk:wght@400;500;600&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;450;500;550;600;650;700&family=Manrope:wght@400;500;600;650;700;750;800&display=swap" rel="stylesheet" />
   </head>
   <body>
-    <main class="app-shell">
+    <svg class="icon-library" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <symbol id="i-mic" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="12" rx="3"/><path d="M5 10v2a7 7 0 0 0 14 0v-2M12 19v3m-4 0h8"/></symbol>
+      <symbol id="i-play" viewBox="0 0 24 24"><path d="m9 5 11 7-11 7Z"/></symbol>
+      <symbol id="i-audio" viewBox="0 0 24 24"><path d="M9 18V5l11-2v13M9 8l11-2"/><ellipse cx="6" cy="18" rx="3" ry="2"/><ellipse cx="17" cy="16" rx="3" ry="2"/></symbol>
+      <symbol id="i-text" viewBox="0 0 24 24"><path d="M4 5h16M12 5v15m-4 0h8M4 5v3m16-3v3"/></symbol>
+      <symbol id="i-spark" viewBox="0 0 24 24"><path d="m12 3 2.5 6.5L21 12l-6.5 2.5L12 21l-2.5-6.5L3 12l6.5-2.5Z"/></symbol>
+      <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14m-6-6 6 6-6 6"/></symbol>
+      <symbol id="i-upload" viewBox="0 0 24 24"><path d="M12 16V3M7 8l5-5 5 5M4 15v5h16v-5"/></symbol>
+      <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="11" rx="3"/><path d="M8 10V7a4 4 0 0 1 8 0v3m-4 5v2"/></symbol>
+      <symbol id="i-chevron" viewBox="0 0 24 24"><path d="m9 5 7 7-7 7"/></symbol>
+      <symbol id="i-external" viewBox="0 0 24 24"><path d="M7 17 17 7M7 7h10v10"/></symbol>
+      <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 4 4 10-10"/></symbol>
+    </svg>
+    <div class="app-shell">
       <header class="topbar">
-        <div class="brand"><span class="brand-dot"></span>PIXEL VOICE</div>
-        <div class="status-pill"><span id="statusDot"></span><span id="statusText">STANDBY</span></div>
+        <a class="brand" href="./" aria-label="Hoho home">
+          <svg class="brand-mark" viewBox="0 0 36 36" aria-hidden="true"><rect width="36" height="36" rx="12" fill="currentColor"/><path d="M11 12v5m14-5v5M11 23c4 4 10 4 14 0" fill="none" stroke="#141216" stroke-width="2.5" stroke-linecap="round"/></svg>
+          <span>hoho<span class="brand-period">.</span></span>
+        </a>
+        <nav class="main-nav" aria-label="Main navigation">
+          <a class="nav-active" href="./" aria-current="page">Studio</a>
+          <a href="https://github.com/HH1st/hoho-avatar#readme" target="_blank" rel="noreferrer">Documentation <svg class="icon"><use href="#i-external"/></svg></a>
+        </nav>
+        <a class="github-link" href="https://github.com/HH1st/hoho-avatar" target="_blank" rel="noreferrer">
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 19c-4 1-4-2-6-2m12 5v-4a3 3 0 0 0-1-2c4 0 7-2 7-6a5 5 0 0 0-1-3c0-1 0-3-1-4-2 0-3 1-4 2a15 15 0 0 0-6 0C8 4 7 3 5 3 4 4 4 6 4 7a5 5 0 0 0-1 3c0 4 3 6 7 6a3 3 0 0 0-1 2v4"/></svg>
+          <span>GitHub</span><svg class="icon external"><use href="#i-external"/></svg>
+        </a>
       </header>
 
-      <section class="intro">
-        <div>
-          <p class="eyebrow">AUDIO-REACTIVE AVATAR LAB</p>
-          <h1>Give your voice<br /><em>a face.</em></h1>
-        </div>
-        <p class="lede">Choose a character, connect an audio provider, and watch speech become motion in real time.</p>
-      </section>
-
-      <section class="avatar-workspace">
-        <div class="avatar-panel section-card">
-          <div class="section-heading"><span>01</span><div><strong>AVATAR</strong><small>Choose the visual identity</small></div></div>
-          <div class="avatar-tools">
-            <label class="avatar-picker">
-              <span>AVATAR</span>
-              <select id="avatarSelect">
-                <option value="niu-lai">NIU LAI</option>
-                <option value="pixel-bot">PIXEL BOT</option>
-                <option value="pixel-portrait">PIXEL PORTRAIT</option>
-              </select>
-            </label>
-            <button id="uploadButton" class="secondary" type="button">LOAD AVATAR ZIP</button>
-            <input id="avatarFile" type="file" accept=".zip,application/zip" hidden />
-            <span id="uploadStatus" class="upload-status" aria-live="polite">Drop a skill-generated character ZIP on the stage</span>
+      <main id="studio">
+        <section class="intro" aria-labelledby="pageTitle">
+          <div>
+            <p class="eyebrow"><span></span> VOICE. MEET PERSONALITY.</p>
+            <h1 id="pageTitle">Your voice. <span>A presence.</span></h1>
+            <p class="lede">Choose your character. Take the mic. Make an impression.</p>
           </div>
-          <div class="avatar-notes"><span>LAYERED PNG</span><span>5 MOUTH STATES</span><span>AUTO BLINK</span></div>
-        </div>
+          <button id="demoSampleButton" class="button sample-shortcut" type="button"><svg class="icon"><use href="#i-play"/></svg> Try a sample <span class="shortcut-note">No mic needed</span></button>
+        </section>
 
-        <div class="stage-wrap">
-          <div class="corner top-left"></div><div class="corner top-right"></div>
-          <div class="corner bottom-left"></div><div class="corner bottom-right"></div>
-          <div class="stage-grid"></div>
-          <canvas id="avatar" width="512" height="512" aria-label="Talking pixel avatar"></canvas>
-          <div class="scanline"></div>
-          <div class="drop-overlay">DROP CHARACTER ZIP</div>
-          <div id="stageLabel" class="stage-label">AVATAR // PIXEL BOT</div>
-        </div>
-      </section>
-
-      <section class="provider-section section-card">
-        <div class="section-heading provider-title"><span>02</span><div><strong>AUDIO PROVIDER</strong><small>Select one way to drive the avatar</small></div></div>
-        <div class="provider-tabs" role="tablist" aria-label="Audio provider">
-          <button class="provider-tab active" data-provider="mic" role="tab" aria-selected="true">MICROPHONE<small>Live local input</small></button>
-          <button class="provider-tab" data-provider="file" role="tab" aria-selected="false">AUDIO FILE<small>Local playback</small></button>
-          <button class="provider-tab" data-provider="tts" role="tab" aria-selected="false">LOCAL TTS<small>Kitten WebGPU</small></button>
-          <button class="provider-tab" data-provider="agent" role="tab" aria-selected="false">VOICE AGENT<small>Azure Realtime</small></button>
-        </div>
-
-        <div class="provider-body">
-          <div class="provider-panel active" data-provider-panel="mic" role="tabpanel">
-            <div class="provider-copy"><strong>Speak into your microphone</strong><span>Audio is analyzed locally and never leaves this tab.</span></div>
-            <button id="micButton" class="primary"><span class="mic-icon">●</span><span id="buttonLabel">START MIC</span></button>
-          </div>
-
-          <div class="provider-panel" data-provider-panel="file" role="tabpanel" hidden>
-            <div class="provider-actions">
-              <button id="sampleAudioButton" class="secondary sample-button" type="button">TRY SAMPLE</button>
-              <button id="audioChooseButton" class="secondary" type="button">CHOOSE AUDIO</button>
-              <input id="audioFile" type="file" accept="audio/*" hidden />
+        <div class="studio-grid">
+          <section class="character-studio" aria-label="Avatar preview and characters">
+            <div class="stage-wrap">
+              <div class="stage-topline"><span class="stage-caption"><span class="tiny-cross">✳</span> THE STAGE</span><div class="status-pill" role="status"><span id="statusDot"></span><span id="statusText">STANDBY</span></div></div>
+              <div class="stage-art" aria-hidden="true"><span class="stage-wordmark">hoho.</span><div class="orbit orbit-one"></div><div class="orbit orbit-two"></div><span class="stage-spark spark-one">✳</span><span class="stage-spark spark-two">+</span><div class="floor-shadow"></div></div>
+              <canvas id="avatar" width="512" height="512" aria-label="Talking avatar preview"></canvas>
+              <div class="stage-bottomline"><div><span class="stage-kicker">IN THE SPOTLIGHT</span><h2 id="stageLabel">Niu Lai</h2></div><span class="stage-note"><span class="small-dot"></span> Every word, a little more you.</span></div>
+              <div class="drop-overlay"><svg class="icon"><use href="#i-upload"/></svg><strong>A new face? Drop it here.</strong><span>Release your character ZIP to bring it to life.</span></div>
             </div>
-            <div class="audio-clip">
-            <div class="audio-clip-info">
-              <span id="audioStatus" aria-live="polite">NO AUDIO SELECTED</span>
-              <span id="audioProgress">00:00 / 00:00</span>
-            </div>
-            <div id="audioTrack" class="audio-track" role="progressbar" aria-label="Audio playback progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="audioTrackFill"></span></div>
-            <div class="audio-actions">
-              <button id="audioPlayButton" class="secondary" type="button" disabled>PLAY</button>
-              <button id="audioStopButton" class="secondary" type="button" disabled>STOP</button>
-            </div>
-          </div>
-          </div>
 
-          <div class="provider-panel" data-provider-panel="tts" role="tabpanel" hidden>
-          <div class="tts-panel">
-            <div class="tts-heading"><span>LOCAL TTS // KITTEN</span><span id="ttsStatus" aria-live="polite">ENGLISH / WEBGPU</span></div>
-            <textarea id="ttsText" rows="3" maxlength="500" placeholder="Type something for your avatar to say…">Hey, I'm Niu Lai. How's your day so far?</textarea>
-            <div class="tts-options">
-              <label>VOICE
-                <select id="ttsVoice">
-                  <option>Bella</option><option>Luna</option><option>Rosie</option><option>Kiki</option>
-                  <option>Jasper</option><option>Bruno</option><option>Hugo</option><option>Leo</option>
-                </select>
-              </label>
-              <label>SPEED
-                <select id="ttsSpeed">
-                  <option value="0.8">0.8×</option><option value="1" selected>1.0×</option>
-                  <option value="1.2">1.2×</option><option value="1.5">1.5×</option>
-                </select>
-              </label>
-              <label>MODE
-                <select id="ttsMode">
-                  <option value="smooth" selected>SMOOTH</option>
-                  <option value="stream">FAST START</option>
-                </select>
-              </label>
-              <button id="ttsSpeakButton" class="secondary sample-button" type="button">SPEAK</button>
-              <button id="ttsStopButton" class="secondary" type="button" disabled>STOP</button>
-            </div>
-          </div>
-          </div>
-
-          <div class="provider-panel" data-provider-panel="agent" role="tabpanel" hidden>
-            <div class="voice-agent-panel">
-              <div class="tts-heading"><span>VOICE AGENT // AZURE REALTIME</span><span id="agentStatus" aria-live="polite">DISCONNECTED</span></div>
-              <p id="agentTranscript" class="agent-transcript">Start a conversation, then speak naturally.</p>
-              <div class="agent-actions">
-                <button id="agentConnectButton" class="secondary sample-button" type="button">START CONVERSATION</button>
-                <button id="agentInterruptButton" class="secondary" type="button" disabled>INTERRUPT</button>
-                <button id="agentDisconnectButton" class="secondary" type="button" disabled>END</button>
+            <div class="character-library">
+              <div class="library-heading"><h2>Choose your alter ego</h2><span>Choose a character</span></div>
+              <select id="avatarSelect" aria-label="Character" hidden><option value="niu-lai">Niu Lai</option><option value="pixel-bot">Pixel Bot</option><option value="pixel-portrait">Pixel Portrait</option></select>
+              <div class="character-list" role="group" aria-label="Choose a character">
+                <button class="character-choice selected" data-avatar="niu-lai" type="button" aria-pressed="true"><span class="character-thumb thumb-peach"><img src="./characters/niu-lai/body.png" alt="" /></span><span><strong>Niu Lai</strong><small>Main character energy</small></span><svg class="icon selection-check"><use href="#i-check"/></svg></button>
+                <button class="character-choice" data-avatar="pixel-bot" type="button" aria-pressed="false"><span class="character-thumb thumb-smoke"><img src="./characters/pixel-bot/body.png" alt="" /></span><span><strong>Pixel Bot</strong><small>Retro charm</small></span><svg class="icon selection-check"><use href="#i-check"/></svg></button>
+                <button class="character-choice" data-avatar="pixel-portrait" type="button" aria-pressed="false"><span class="character-thumb thumb-lilac"><img src="./characters/pixel-portrait/body.png" alt="" /></span><span><strong>Portrait</strong><small>Quiet confidence</small></span><svg class="icon selection-check"><use href="#i-check"/></svg></button>
+                <button id="customAvatarButton" class="character-choice" data-avatar="custom" type="button" aria-pressed="false" hidden><span class="character-thumb"><svg class="icon"><use href="#i-spark"/></svg></span><span><strong id="customAvatarName">Your character</strong><small>Made by you</small></span><svg class="icon selection-check"><use href="#i-check"/></svg></button>
               </div>
+              <div class="upload-row"><span id="uploadStatus" class="upload-status" aria-live="polite">Have your own character? Give it a voice.</span><button id="uploadButton" class="text-button" type="button"><svg class="icon"><use href="#i-upload"/></svg> Import avatar</button><input id="avatarFile" type="file" accept=".zip,application/zip" hidden /></div>
             </div>
-          </div>
-        </div>
-        <div id="privacyNotice" class="provider-privacy">LOCAL MODE // AUDIO STAYS IN THIS TAB</div>
-      </section>
+          </section>
 
-      <section class="telemetry">
-        <div class="meter-panel">
-          <div class="panel-heading"><span>LIVE INPUT</span><span id="dbValue">−∞ dB</span></div>
-          <div id="bars" class="bars" role="meter" aria-label="Audio level" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"></div>
+          <aside class="control-column" aria-label="Voice controls">
+            <section class="provider-section" aria-labelledby="voiceTitle">
+              <div class="control-heading"><div><p class="eyebrow">THE VOICE ROOM</p><h2 id="voiceTitle">Make yourself heard.</h2></div><span class="heading-symbol" aria-hidden="true"><svg class="icon"><use href="#i-audio"/></svg></span></div>
+              <p class="control-description">Four ways to turn sound into personality.</p>
+              <div class="provider-tabs" role="tablist" aria-label="Audio provider">
+                <button id="tab-mic" class="provider-tab active" data-provider="mic" role="tab" aria-selected="true" aria-controls="panel-mic"><svg class="icon"><use href="#i-mic"/></svg><span>Microphone</span><small>Your own voice</small></button>
+                <button id="tab-file" class="provider-tab" data-provider="file" role="tab" aria-selected="false" aria-controls="panel-file" tabindex="-1"><svg class="icon"><use href="#i-audio"/></svg><span>Audio file</span><small>Play something</small></button>
+                <button id="tab-tts" class="provider-tab" data-provider="tts" role="tab" aria-selected="false" aria-controls="panel-tts" tabindex="-1"><svg class="icon"><use href="#i-text"/></svg><span>Local TTS</span><small>Turn text into voice</small></button>
+                <button id="tab-agent" class="provider-tab" data-provider="agent" role="tab" aria-selected="false" aria-controls="panel-agent" tabindex="-1"><svg class="icon"><use href="#i-spark"/></svg><span>Voice agent</span><small>Have a conversation</small></button>
+              </div>
+
+              <div class="provider-body">
+                <div id="panel-mic" class="provider-panel active" data-provider-panel="mic" role="tabpanel" aria-labelledby="tab-mic">
+                  <div class="mic-illustration" aria-hidden="true"><span></span><span></span><span></span><div><svg class="icon"><use href="#i-mic"/></svg></div><span></span><span></span><span></span></div>
+                  <h3>The mic is yours.</h3><p>A story. A late-night thought.<br />Whatever it is, give it a voice.</p>
+                  <button id="micButton" class="button primary" type="button"><svg class="icon"><use href="#i-mic"/></svg><span id="buttonLabel">Start microphone</span><svg class="icon button-arrow"><use href="#i-arrow"/></svg></button>
+                  <span class="action-note">You choose when to start and stop.</span>
+                </div>
+
+                <div id="panel-file" class="provider-panel" data-provider-panel="file" role="tabpanel" aria-labelledby="tab-file" hidden>
+                  <p class="panel-eyebrow">SOUND ON, PERSONALITY ON</p><h3>A voice, ready to play.</h3><p>Bring an audio file, or try a little hello on us.</p>
+                  <div class="provider-actions"><button id="sampleAudioButton" class="button primary" type="button"><svg class="icon"><use href="#i-play"/></svg> Try sample</button><button id="audioChooseButton" class="button secondary" type="button"><svg class="icon"><use href="#i-upload"/></svg> Choose audio</button><input id="audioFile" type="file" accept="audio/*" hidden /></div>
+                  <div class="audio-clip"><span id="audioStatus" aria-live="polite">No audio selected</span><div id="audioTrack" class="audio-track" role="progressbar" aria-label="Audio playback progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="audioTrackFill"></span></div><div class="audio-clip-bottom"><span id="audioProgress">00:00 / 00:00</span><div class="audio-actions"><button id="audioPlayButton" class="button mini" type="button" disabled>Play</button><button id="audioStopButton" class="button mini" type="button" disabled>Stop</button></div></div></div>
+                </div>
+
+                <div id="panel-tts" class="provider-panel" data-provider-panel="tts" role="tabpanel" aria-labelledby="tab-tts" hidden>
+                  <div class="panel-title-row"><h3>A few words go a long way.</h3></div><p>English speech, generated on your device.</p>
+                  <label for="ttsText" class="field-label">What should your avatar say?</label><textarea id="ttsText" rows="3" maxlength="500" placeholder="Start with a little hello…">Hey, I'm Niu Lai. How's your day so far?</textarea>
+                  <div class="tts-options"><label>Voice<select id="ttsVoice"><option>Bella</option><option>Luna</option><option>Rosie</option><option>Kiki</option><option>Jasper</option><option>Bruno</option><option>Hugo</option><option>Leo</option></select></label><label>Speed<select id="ttsSpeed"><option value="0.8">0.8×</option><option value="1" selected>1.0×</option><option value="1.2">1.2×</option><option value="1.5">1.5×</option></select></label><label>Playback<select id="ttsMode"><option value="smooth">Smooth</option><option value="stream">Fast start</option></select></label></div>
+                  <div class="tts-actions"><button id="ttsSpeakButton" class="button primary" type="button"><svg class="icon"><use href="#i-play"/></svg> Say it out loud</button><button id="ttsStopButton" class="button secondary" type="button" disabled>Stop</button></div><span id="ttsStatus" class="action-note" aria-live="polite">English · WebGPU required</span>
+                </div>
+
+                <div id="panel-agent" class="provider-panel" data-provider-panel="agent" role="tabpanel" aria-labelledby="tab-agent" hidden>
+                  <div class="panel-title-row"><h3>A little back-and-forth.</h3><svg class="icon" aria-hidden="true"><use href="#i-spark"/></svg></div><p>Start a real-time conversation. Your avatar is all ears.</p>
+                  <div class="transcript-box"><div class="transcript-heading"><span>Conversation</span><span id="agentStatus" aria-live="polite">Disconnected</span></div><p id="agentTranscript" class="agent-transcript">Start a conversation, then speak naturally.</p></div>
+                  <button id="agentConnectButton" class="button primary" type="button">Start conversation</button><div class="agent-actions"><button id="agentInterruptButton" class="button secondary" type="button" disabled>Interrupt</button><button id="agentDisconnectButton" class="button secondary" type="button" disabled>End conversation</button></div>
+                </div>
+              </div>
+              <div class="privacy-row"><svg class="icon" aria-hidden="true"><use href="#i-lock"/></svg><span id="privacyNotice">Just between you and your browser. Audio stays here.</span></div>
+            </section>
+            <div class="studio-note"><span aria-hidden="true">✳</span><p>Sound like yourself.<br /><strong>Look like whoever you want.</strong></p></div>
+          </aside>
         </div>
-        <div class="readout">
-          <span class="readout-label">MOUTH STATE</span>
-          <strong id="mouthState">CLOSED</strong>
-          <span id="stateHint">waiting for signal</span>
-        </div>
-        <div class="readout">
-          <span class="readout-label">SAMPLE RATE</span>
-          <strong id="sampleRate">—</strong>
-          <span>mono / float32</span>
-        </div>
-      </section>
-    </main>
+
+        <details class="telemetry"><summary><span><svg class="icon" aria-hidden="true"><use href="#i-audio"/></svg> Behind the voice</span><span class="details-hint">Live audio details <svg class="icon"><use href="#i-chevron"/></svg></span></summary><div class="telemetry-grid"><div class="meter-panel"><div class="panel-heading"><span>Input level</span><span id="dbValue">−∞ dB</span></div><div id="bars" class="bars" role="meter" aria-label="Audio level" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"></div></div><div class="readout"><span>Mouth state</span><strong id="mouthState">Closed</strong><small id="stateHint">Waiting for signal</small></div><div class="readout"><span>Sample rate</span><strong id="sampleRate">—</strong><small>Mono audio</small></div></div></details>
+      </main>
+      <footer class="footer"><span>A presence beyond the screen.</span><span>Hoho Avatar <span class="footer-dot">·</span> An open-source voice studio.</span></footer>
+    </div>
     <script type="module" src="/examples/basic/main.ts"></script>
   </body>
 </html>

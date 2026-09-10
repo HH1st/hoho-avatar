@@ -6,11 +6,11 @@ Hoho Avatar is an open-source toolkit for building speaking and audio-reactive a
 
 ![Niu Lai reacting to voice with Hoho Avatar](docs/images/niu-lai-talking.gif)
 
-Click **TRY SAMPLE VOICE** in the live demo to see Niu Lai react immediately—no microphone permission or audio file required.
+Click **Try a sample** in the live demo to see Niu Lai react immediately—no microphone permission or audio file required.
 
-![Hoho Avatar demo with Niu Lai as the default talking character](docs/images/niu-lai-demo.png)
+![Hoho Avatar Studio with its charcoal and coral interface, character cards, and voice controls](docs/images/niu-lai-demo.png)
 
-_The browser demo with Niu Lai loaded as the default audio-reactive avatar._
+_The redesigned Avatar Studio: a charcoal stage, coral accents, character cards, and four voice modes._
 
 The project currently ships a browser-first TypeScript engine that analyzes streaming PCM audio, selects five mouth states, adds automatic blinking, and renders layered PNG characters with Canvas 2D. The demo accepts microphone input, a local audio file, locally generated English speech from KittenTTS, or an optional Azure Realtime voice-agent session. Local audio analysis, file decoding, and KittenTTS stay in the browser; Voice Agent mode explicitly sends microphone audio to the configured Azure OpenAI resource.
 
@@ -27,7 +27,7 @@ npm install
 npm run dev
 ```
 
-Open the URL shown by Vite and press **TRY SAMPLE VOICE**. Everything runs locally in the browser.
+Open the URL shown by Vite and press **Try a sample**. Everything runs locally in the browser.
 
 ## Built for voice agents
 
@@ -56,11 +56,11 @@ See [ASSETS.md](ASSETS.md) for their licensing and provenance notes.
 
 ## Run from source
 
-Select a character and press **START MIC** for live input, **TRY SAMPLE VOICE** for the bundled demo clip, **CHOOSE AUDIO** to decode and play a local audio file, or use **LOCAL TTS // KITTEN** to synthesize English speech. Microphone access normally requires localhost or a secure HTTPS context. KittenTTS requires WebGPU and downloads its Nano model on first use. The demo also serves the complete English phonemizer dictionary locally because the current npm package omits its runtime data assets.
+Select a character and press **Start microphone** for live input, **Try a sample** for the bundled demo clip, **Choose audio** to decode and play a local audio file, or use **Local TTS** to synthesize English speech. Microphone access normally requires localhost or a secure HTTPS context. KittenTTS requires WebGPU and downloads its Nano model on first use. The demo also serves the complete English phonemizer dictionary locally because the current npm package omits its runtime data assets.
 
 ### Load a custom character
 
-The demo accepts a `.zip` containing one V1 character directory. Select **LOAD AVATAR ZIP** or drop the archive onto the avatar stage; the package is validated, unpacked, and rendered entirely inside the browser.
+The demo accepts a `.zip` containing one V1 character directory. Select **Import avatar** or drop the archive onto the avatar stage; the package is validated, unpacked, and rendered entirely inside the browser.
 
 Imports are limited to 25 MB compressed, 75 MB of extracted character files, and 1,024 archive entries. Sizes are checked before and during extraction; duplicate asset paths are rejected.
 

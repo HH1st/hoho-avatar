@@ -31,7 +31,7 @@ async function setup(page, { ready = true, healthy = true } = {}) {
     socket.send(JSON.stringify({ type: "gateway.ready" }));
   });
   await page.goto("./");
-  await page.getByRole("tab", { name: /VOICE AGENT/ }).click();
+  await page.getByRole("tab", { name: /VOICE AGENT/i }).click();
   return { sockets, messages, errors, send: (event) => sockets.at(-1).send(JSON.stringify(event)) };
 }
 
@@ -79,11 +79,11 @@ test("late microphone permission after switching provider is disposed", async ({
   await page.evaluate(() => { window.holdMicrophone = true; });
   await page.locator("#agentConnectButton").click();
   await expect.poll(() => page.evaluate(() => Boolean(window.releaseMicrophone))).toBe(true);
-  await page.getByRole("tab", { name: /AUDIO FILE/ }).click();
+  await page.getByRole("tab", { name: /AUDIO FILE/i }).click();
   await page.evaluate(() => window.releaseMicrophone());
   await released(page);
   await expect(page.locator("#statusText")).toHaveText("STANDBY");
-  await expect(page.locator("#privacyNotice")).toContainText("LOCAL MODE");
+  await expect(page.locator("#privacyNotice")).toContainText("Audio stays here");
   expect(mock.errors).toEqual([]);
 });
 
@@ -93,7 +93,7 @@ test("disconnect releases resources and retry recovers", async ({ page }) => {
   mock.sockets.at(-1).close({ code: 1011, reason: "network lost" });
   await expect(page.locator("#agentStatus")).toContainText("Connection closed");
   await released(page);
-  await expect(page.locator("#agentConnectButton")).toHaveText("RETRY CONNECTION");
+  await expect(page.locator("#agentConnectButton")).toHaveText("Retry connection");
   await start(page);
   expect(mock.sockets).toHaveLength(2);
   await page.locator("#agentDisconnectButton").click();
@@ -116,7 +116,7 @@ test("playback stays speaking after response.done and interruption silences it",
   mock.send({ type: "output.transcript.delta", delta: " stale" });
   mock.send({ type: "output.audio.delta", audio: Buffer.alloc(48000).toString("base64") });
   await expect(page.locator("#agentTranscript")).toHaveText("Hello");
-  await page.getByRole("tab", { name: /MICROPHONE/ }).click();
+  await page.getByRole("tab", { name: /MICROPHONE/i }).click();
   await released(page);
   expect(mock.errors).toEqual([]);
 });
@@ -149,18 +149,18 @@ test("microphone denial cleans up the connected socket and supports retry", asyn
 
 test("local microphone is stopped when switching to a voice conversation", async ({ page }) => {
   const mock = await setup(page);
-  await page.getByRole("tab", { name: /MICROPHONE/ }).click();
+  await page.getByRole("tab", { name: /MICROPHONE/i }).click();
   await page.locator("#micButton").click();
   await expect(page.locator("#statusText")).toHaveText("MIC LIVE");
-  await page.getByRole("tab", { name: /VOICE AGENT/ }).click();
+  await page.getByRole("tab", { name: /VOICE AGENT/i }).click();
   await released(page);
   await start(page);
-  await page.getByRole("tab", { name: /AUDIO FILE/ }).click();
-  await page.getByRole("tab", { name: /LOCAL TTS/ }).click();
-  await page.getByRole("tab", { name: /MICROPHONE/ }).click();
+  await page.getByRole("tab", { name: /AUDIO FILE/i }).click();
+  await page.getByRole("tab", { name: /LOCAL TTS/i }).click();
+  await page.getByRole("tab", { name: /MICROPHONE/i }).click();
   await released(page);
   await expect(page.locator("#statusText")).toHaveText("STANDBY");
-  await expect(page.getByRole("tab", { name: /MICROPHONE/ })).toHaveAttribute("aria-selected", "true");
+  await expect(page.getByRole("tab", { name: /MICROPHONE/i })).toHaveAttribute("aria-selected", "true");
   expect(mock.errors).toEqual([]);
 });
 
@@ -172,19 +172,19 @@ test("sample audio arriving after a provider switch cannot restart playback", as
     await new Promise((resolve) => { release = resolve; });
     await route.fulfill({ response });
   });
-  await page.getByRole("tab", { name: /AUDIO FILE/ }).click();
+  await page.getByRole("tab", { name: /AUDIO FILE/i }).click();
   await page.locator("#sampleAudioButton").click();
   await expect.poll(() => Boolean(release)).toBe(true);
-  await page.getByRole("tab", { name: /MICROPHONE/ }).click();
+  await page.getByRole("tab", { name: /MICROPHONE/i }).click();
   release();
   await expect(page.locator("#sampleAudioButton")).toBeEnabled();
   await released(page);
   await expect(page.locator("#statusText")).toHaveText("STANDBY");
-  await page.getByRole("tab", { name: /AUDIO FILE/ }).click();
+  await page.getByRole("tab", { name: /AUDIO FILE/i }).click();
   await page.unroute("**/audio/sample-voice.wav");
   await page.locator("#sampleAudioButton").click();
   await expect(page.locator("#statusText")).toHaveText("AUDIO LIVE");
-  await page.getByRole("tab", { name: /MICROPHONE/ }).click();
+  await page.getByRole("tab", { name: /MICROPHONE/i }).click();
   await released(page);
   expect(mock.errors).toEqual([]);
 });
@@ -211,7 +211,7 @@ test("switching provider while the gateway health request is pending cancels sta
   });
   await page.locator("#agentConnectButton").click();
   await expect.poll(() => Boolean(release)).toBe(true);
-  await page.getByRole("tab", { name: /LOCAL TTS/ }).click();
+  await page.getByRole("tab", { name: /LOCAL TTS/i }).click();
   release();
   await released(page);
   expect(mock.sockets).toHaveLength(0);

@@ -16,6 +16,10 @@ const dbValue = document.querySelector("#dbValue")!;
 const sampleRateLabel = document.querySelector("#sampleRate")!;
 const bars = document.querySelector("#bars")!;
 const avatarSelect = document.querySelector<HTMLSelectElement>("#avatarSelect")!;
+const characterChoices = Array.from(document.querySelectorAll<HTMLButtonElement>(".character-choice"));
+const customAvatarButton = document.querySelector<HTMLButtonElement>("#customAvatarButton")!;
+const customAvatarName = document.querySelector<HTMLElement>("#customAvatarName")!;
+const demoSampleButton = document.querySelector<HTMLButtonElement>("#demoSampleButton")!;
 const stageLabel = document.querySelector("#stageLabel")!;
 const stageWrap = document.querySelector<HTMLElement>(".stage-wrap")!;
 const uploadButton = document.querySelector<HTMLButtonElement>("#uploadButton")!;
@@ -74,17 +78,17 @@ let ttsTextEdited = false;
 const avatars = {
   "niu-lai": {
     character: `${import.meta.env.BASE_URL}characters/niu-lai/character.json`,
-    label: "AVATAR // NIU LAI",
+    label: "Niu Lai",
     defaultText: "Hey, I'm Niu Lai. How's your day so far?",
   },
   "pixel-bot": {
     character: `${import.meta.env.BASE_URL}characters/pixel-bot/character.json`,
-    label: "AVATAR // PIXEL BOT",
+    label: "Pixel Bot",
     defaultText: "Hey, I'm Pixel Bot. What's been the best part of your day?",
   },
   "pixel-portrait": {
     character: `${import.meta.env.BASE_URL}characters/pixel-portrait/character.json`,
-    label: "AVATAR // PIXEL PORTRAIT",
+    label: "Pixel Portrait",
     defaultText: "Hey there. How's your day treating you?",
   },
 } as const;
@@ -93,7 +97,7 @@ function selectedAvatar(): { character: string | CharacterDefinition; label: str
   if (avatarSelect.value === "custom" && customAvatar) {
     return {
       character: customAvatar.definition,
-      label: `AVATAR // ${customAvatar.name.toUpperCase()}`,
+      label: customAvatar.name,
       defaultText: `Hey, I'm ${customAvatar.name}. How's your day so far?`,
     };
   }
@@ -104,6 +108,17 @@ function syncDefaultTTSText() {
   if (ttsTextEdited) return;
   ttsText.value = selectedAvatar().defaultText;
   updateTTSControls();
+}
+
+function syncCharacterChoices() {
+  customAvatarButton.hidden = !customAvatar;
+  customAvatarName.textContent = customAvatar?.name ?? "Your character";
+  for (const choice of characterChoices) {
+    const selected = choice.dataset.avatar === avatarSelect.value;
+    choice.classList.toggle("selected", selected);
+    choice.setAttribute("aria-pressed", String(selected));
+    choice.disabled = avatarSelect.disabled;
+  }
 }
 
 const hints = {
@@ -129,6 +144,8 @@ async function mountSelectedSprite(sampleRate: number, state: CharacterState, si
   const next = new TalkingSprite(canvas, { character: avatar.character, sampleRate });
   sprite = next;
   stageLabel.textContent = avatar.label;
+  stageWrap.dataset.character = avatarSelect.value;
+  syncCharacterChoices();
   await next.ready;
   if (sprite !== next) return;
   next.start();
@@ -156,6 +173,7 @@ function updateClipProgress(currentTime: number, duration: number) {
 function updateClipControls() {
   const state = clipPlayer?.state ?? "empty";
   sampleAudioButton.disabled = clipLoading || state === "loading" || state === "playing";
+  demoSampleButton.disabled = sampleAudioButton.disabled;
   audioChooseButton.disabled = clipLoading || state === "loading";
   audioPlayButton.disabled = clipLoading || !clipMetadata || state === "loading" || state === "playing";
   audioStopButton.disabled = state !== "playing";
@@ -389,8 +407,10 @@ async function playSampleAudio() {
 }
 
 async function importAvatar(file: File) {
+  if (avatarSelect.disabled) return;
   uploadButton.disabled = true;
   avatarSelect.disabled = true;
+  syncCharacterChoices();
   uploadStatus.classList.remove("error", "success");
   uploadStatus.textContent = `Opening ${file.name}…`;
   let nextAvatar: LoadedCharacterPackage | undefined;
@@ -430,6 +450,7 @@ async function importAvatar(file: File) {
   } finally {
     uploadButton.disabled = false;
     avatarSelect.disabled = false;
+    syncCharacterChoices();
     avatarFile.value = "";
   }
 }
@@ -442,7 +463,7 @@ async function startMic() {
   const abort = new AbortController();
   microphone = capture;
   micAbort = abort;
-  buttonLabel.textContent = "CANCEL MIC";
+  buttonLabel.textContent = "Cancel microphone";
   statusText.textContent = "REQUESTING MIC";
   try {
     await capture.prepare();
@@ -452,7 +473,7 @@ async function startMic() {
     if (microphone !== capture) return;
     sampleRateLabel.textContent = `${(capture.sampleRate / 1000).toFixed(1)} kHz`;
     micButton.classList.add("recording");
-    buttonLabel.textContent = "STOP MIC";
+    buttonLabel.textContent = "Stop microphone";
     statusText.textContent = "MIC LIVE";
     statusDot.classList.add("live");
   } catch (error) {
@@ -460,7 +481,7 @@ async function startMic() {
     await stopMic();
     if (activeProvider === "mic") {
       statusText.textContent = "MIC BLOCKED";
-      buttonLabel.textContent = "TRY AGAIN";
+      buttonLabel.textContent = "Try again";
     }
   }
 }
@@ -471,7 +492,7 @@ function stopMic(): Promise<void> {
   micAbort?.abort();
   micAbort = undefined;
   micButton.classList.remove("recording");
-  buttonLabel.textContent = "START MIC";
+  buttonLabel.textContent = "Start microphone";
   sprite?.resetAudio();
   sprite?.setState("idle");
   if (activeProvider === "mic") {
@@ -517,7 +538,7 @@ function currentSampleRate(): number {
 function updateVoiceAgentControls(state: VoiceSessionState = voiceSession.state) {
   const live = state === "listening" || state === "thinking" || state === "speaking";
   agentConnectButton.disabled = state === "connecting" || state === "stopping" || live;
-  agentConnectButton.textContent = state === "error" ? "RETRY CONNECTION" : "START CONVERSATION";
+  agentConnectButton.textContent = state === "error" ? "Retry connection" : "Start conversation";
   agentInterruptButton.disabled = !live;
   agentDisconnectButton.disabled = state !== "connecting" && !live;
 }
@@ -550,6 +571,7 @@ function selectProvider(provider: ProviderName) {
     const active = tab.dataset.provider === provider;
     tab.classList.toggle("active", active);
     tab.setAttribute("aria-selected", String(active));
+    tab.tabIndex = active ? 0 : -1;
   }
   for (const panel of providerPanels) {
     const active = panel.dataset.providerPanel === provider;
@@ -557,8 +579,8 @@ function selectProvider(provider: ProviderName) {
     panel.hidden = !active;
   }
   privacyNotice.textContent = provider === "agent"
-    ? "CLOUD MODE // MICROPHONE AUDIO IS SENT TO AZURE OPENAI"
-    : "LOCAL MODE // AUDIO STAYS IN THIS TAB";
+    ? "Voice conversations send microphone audio to Azure OpenAI."
+    : "Just between you and your browser. Audio stays here.";
 }
 
 micButton.addEventListener("click", () => {
@@ -567,13 +589,33 @@ micButton.addEventListener("click", () => {
 
 avatarSelect.addEventListener("change", async () => {
   avatarSelect.disabled = true;
+  uploadButton.disabled = true;
+  syncCharacterChoices();
   try {
     const state: CharacterState = microphone ? "listening" : clipPlayer?.state === "playing" || ttsPlayer?.state === "playing" ? "speaking" : "idle";
     await mountSelectedSprite(currentSampleRate(), state);
     syncDefaultTTSText();
+  } catch (error) {
+    uploadStatus.textContent = error instanceof Error ? error.message : "Unable to load this character.";
+    uploadStatus.classList.add("error");
   } finally {
     avatarSelect.disabled = false;
+    uploadButton.disabled = false;
+    syncCharacterChoices();
   }
+});
+
+for (const choice of characterChoices) {
+  choice.addEventListener("click", () => {
+    if (avatarSelect.disabled || avatarSelect.value === choice.dataset.avatar) return;
+    avatarSelect.value = choice.dataset.avatar!;
+    avatarSelect.dispatchEvent(new Event("change"));
+  });
+}
+
+demoSampleButton.addEventListener("click", () => {
+  selectProvider("file");
+  void playSampleAudio();
 });
 
 uploadButton.addEventListener("click", () => avatarFile.click());
@@ -620,13 +662,26 @@ agentConnectButton.addEventListener("click", () => {
   if (activeProvider !== "agent") return;
   void voiceSession.start({
     voice: "cedar",
-    instructions: `You are ${selectedAvatar().label.replace("AVATAR // ", "")}, a warm and concise voice companion. Keep spoken responses short and natural.`,
+    instructions: `You are ${selectedAvatar().label}, a warm and concise voice companion. Keep spoken responses short and natural.`,
   });
 });
 agentInterruptButton.addEventListener("click", () => voiceSession.interrupt());
 agentDisconnectButton.addEventListener("click", () => void voiceSession.stop());
 for (const tab of providerTabs) {
   tab.addEventListener("click", () => void selectProvider(tab.dataset.provider as ProviderName));
+  tab.addEventListener("keydown", (event) => {
+    const available = providerTabs.filter((item) => !item.disabled);
+    const index = available.indexOf(tab);
+    let next: HTMLButtonElement | undefined;
+    if (event.key === "ArrowRight" || event.key === "ArrowDown") next = available[(index + 1) % available.length];
+    if (event.key === "ArrowLeft" || event.key === "ArrowUp") next = available[(index - 1 + available.length) % available.length];
+    if (event.key === "Home") next = available[0];
+    if (event.key === "End") next = available.at(-1);
+    if (!next) return;
+    event.preventDefault();
+    selectProvider(next.dataset.provider as ProviderName);
+    next.focus();
+  });
 }
 
 for (const eventName of ["dragenter", "dragover"]) {
