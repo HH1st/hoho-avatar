@@ -223,4 +223,74 @@ h1 > span { color: #ffb09c; font-family: Georgia, 'Times New Roman', serif; font
   .telemetry-grid { grid-template-columns: 1fr 1fr; gap: 22px; } .meter-panel { grid-column: 1 / -1; } .readout { padding-left: 0; border-left: 0; }
   .footer { gap: 18px; align-items: flex-start; line-height: 1.6; } .footer > span:last-child { text-align: right; max-width: 155px; } .footer-dot { margin: 0 3px; }
 }
+/* On a phone the preview and controls form one workspace. The cast is secondary. */
+@media (max-width: 850px) {
+  :root {
+    --mobile-stage-height: clamp(104px, calc(var(--studio-viewport-height, 100svh) * .28), 236px);
+    --stage-top: max(8px, env(safe-area-inset-top));
+    scroll-padding-top: calc(var(--mobile-stage-height) + var(--stage-top) + 16px);
+    scroll-padding-bottom: max(20px, env(safe-area-inset-bottom));
+  }
+  .app-shell { padding-inline: max(16px, env(safe-area-inset-left)) max(16px, env(safe-area-inset-right)); }
+  .topbar { height: 62px; }
+  .intro { display: flex; align-items: center; padding: 22px 0; gap: 12px; }
+  .intro .eyebrow, .intro .lede, .shortcut-note { display: none; }
+  h1 { font-size: 27px; letter-spacing: -1px; margin: 0; }
+  h1 > span { display: block; letter-spacing: -.8px; }
+  .sample-shortcut { margin: 0; min-height: 44px; padding: 10px 12px; font-size: 12px; }
+  .studio-grid { display: flex; flex-direction: column; gap: 14px; }
+  .character-studio { display: contents; }
+  .stage-wrap {
+    order: 0; position: sticky; top: var(--stage-top); z-index: 10;
+    width: 100%; height: var(--mobile-stage-height); flex-shrink: 0;
+    box-shadow: 0 -18px 0 8px #101012, 0 10px 20px #101012b3;
+  }
+  #avatar { top: 8px; width: calc(100% - 24px); height: calc(100% - 16px); max-width: 100%; }
+  .stage-topline { top: 12px; left: 14px; right: 14px; align-items: flex-start; }
+  .stage-caption { font-size: 8px; letter-spacing: 1px; }
+  .stage-caption .tiny-cross { font-size: 13px; }
+  .status-pill { font-size: 8px; max-width: 45%; padding: 6px 8px; }
+  .stage-bottomline { bottom: 12px; left: 14px; right: 14px; }
+  .stage-bottomline h2 { font-size: 14px; max-width: 110px; overflow-wrap: anywhere; }
+  .stage-kicker, .stage-note, .stage-spark { display: none; }
+  .orbit-one { width: 210px; height: 210px; }
+  .orbit-two { width: 300px; height: 300px; }
+  .stage-wordmark { font-size: 170px; letter-spacing: -12px; }
+  .floor-shadow { bottom: 9px; width: 145px; height: 12px; }
+  .control-column { order: 1; width: 100%; }
+  .character-library { order: 2; width: 100%; padding-top: 14px; }
+  .studio-note { display: none; }
+  .provider-section { padding: 16px; }
+  .control-heading .eyebrow, .heading-symbol, .control-description { display: none; }
+  .control-heading h2 { font-size: 18px; letter-spacing: -.5px; margin-bottom: 14px; }
+  .provider-tabs { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+  .provider-tab { grid-template-columns: 1fr; justify-items: center; text-align: center; gap: 7px; padding: 10px 2px; min-height: 64px; }
+  .provider-tab .icon { grid-row: auto; width: 18px; height: 18px; }
+  .provider-tab > span { font-size: 10px; }
+  .provider-tab small { display: none; }
+  .provider-body { margin-top: 14px; padding-top: 16px; }
+  .mic-illustration, .provider-panel > .panel-eyebrow { display: none; }
+  .provider-panel h3 { font-size: 15px; margin-bottom: 6px; }
+  .provider-panel > p { margin-bottom: 12px; font-size: 12px; line-height: 1.5; }
+  .provider-panel[data-provider-panel='mic'] > p br { display: none; }
+  .provider-panel[data-provider-panel='mic'] > p { max-width: 320px; margin-inline: auto; }
+  .action-note { margin-top: 8px; }
+  .privacy-row { margin-top: 12px; padding-top: 10px; }
+  .button, .text-button { min-height: 44px; }
+  .agent-actions .button, .audio-actions .button { min-height: 44px; font-size: 12px; }
+  .transcript-box { margin: 12px 0; padding: 12px; }
+  .agent-transcript { min-height: 40px; max-height: 100px; margin: 12px 0 0; }
+  #ttsText { font-size: 16px; min-height: 88px; max-height: 160px; margin-bottom: 10px; }
+  .tts-options select { font-size: 16px; min-height: 44px; }
+  .tts-actions { margin-top: 14px; }
+  .audio-clip { margin-top: 14px; padding: 12px; }
+  .footer { padding-bottom: max(24px, env(safe-area-inset-bottom)); }
+  .provider-panel, .character-library { scroll-margin-top: 12px; }
+}
+@media (max-width: 360px) {
+  .app-shell { padding-inline: 10px; }
+  .provider-section { padding: 12px; }
+  .provider-tab > span { font-size: 9px; }
+  h1 { font-size: 24px; }
+}
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; animation: none !important; scroll-behavior: auto !important; } }

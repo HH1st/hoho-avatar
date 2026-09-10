@@ -5,6 +5,15 @@ import { MicrophoneInput } from "./MicrophoneInput";
 import { VoiceSession, type VoiceSessionState } from "./VoiceSession";
 import "./style.css";
 
+// Mobile browser chrome and the software keyboard change the usable viewport.
+// Size the same live canvas to leave room for controls and text entry.
+function updateStudioViewport() {
+  document.documentElement.style.setProperty("--studio-viewport-height", `${window.visualViewport?.height ?? window.innerHeight}px`);
+}
+updateStudioViewport();
+window.visualViewport?.addEventListener("resize", updateStudioViewport);
+window.addEventListener("resize", updateStudioViewport);
+
 const canvas = document.querySelector<HTMLCanvasElement>("#avatar")!;
 const micButton = document.querySelector<HTMLButtonElement>("#micButton")!;
 const buttonLabel = document.querySelector("#buttonLabel")!;
@@ -615,6 +624,9 @@ for (const choice of characterChoices) {
 
 demoSampleButton.addEventListener("click", () => {
   selectProvider("file");
+  if (window.matchMedia("(max-width: 850px)").matches) {
+    document.querySelector(".provider-section")?.scrollIntoView({ block: "start", behavior: "instant" });
+  }
   void playSampleAudio();
 });
 
