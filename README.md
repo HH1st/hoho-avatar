@@ -409,7 +409,7 @@ The engine processes PCM data in the browser. Local microphone visualization and
 
 Applications embedding the engine remain responsible for how they acquire, store, or transmit audio outside the engine.
 
-The engine targets modern browsers with Canvas 2D, `fetch`, and `requestAnimationFrame`. The microphone path additionally requires `getUserMedia` and currently uses the legacy `ScriptProcessorNode`. Local-file playback requires `decodeAudioData` and `AudioWorklet`.
+The engine targets modern browsers with Canvas 2D, `fetch`, and `requestAnimationFrame`. Microphone capture requires `getUserMedia` and `AudioWorklet`; the SDK source emits mono PCM in 20 ms batches from the audio rendering thread, with local monitoring muted. Local-file playback requires `decodeAudioData` and `AudioWorklet`.
 
 ## Current scope and roadmap
 

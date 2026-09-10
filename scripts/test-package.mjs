@@ -75,11 +75,21 @@ try {
     const workletsBefore = servedWorklets.length;
     page.on('pageerror', (error) => errors.push(error.message));
     await page.addInitScript(() => {
-      window.tracks = []; window.contexts = [];
+      window.tracks = []; window.contexts = []; window.pcmPackets = [];
       const capture = navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);
       navigator.mediaDevices.getUserMedia = async (options) => { const stream = await capture(options); window.tracks.push(...stream.getTracks()); return stream; };
       const Context = AudioContext;
       window.AudioContext = class extends Context { constructor(...args) { super(...args); window.contexts.push(this); } };
+      Context.prototype.createScriptProcessor = () => { throw new Error('Capture must use AudioWorklet'); };
+      const Worklet = AudioWorkletNode;
+      window.AudioWorkletNode = class extends Worklet {
+        constructor(context, ...args) {
+          super(context, ...args);
+          this.port.addEventListener('message', (event) => {
+            window.pcmPackets.push({ length: event.data.length, rate: context.sampleRate, audible: event.data.some((value) => value !== 0) });
+          });
+        }
+      };
     });
     await page.goto(origin + path);
     await page.waitForFunction(() => document.querySelector('#status').textContent === 'Ready');
@@ -90,9 +100,12 @@ try {
     await page.click('#stop');
     await page.waitForFunction(() => window.contexts.every((context) => context.state === 'closed'));
     const before = Number(await page.locator('#frames').textContent());
+    await page.evaluate(() => { window.pcmPackets = []; });
     await page.click('#mic');
     await page.waitForFunction(() => document.querySelector('#status').textContent === 'Listening');
     await page.waitForFunction((before) => Number(document.querySelector('#frames').textContent) > before + 3, before);
+    await page.waitForFunction(() => window.pcmPackets.length >= 3 && window.pcmPackets.some((packet) => packet.audible));
+    assert.ok(await page.evaluate(() => window.pcmPackets.every((packet) => packet.length === Math.round(packet.rate * 0.02))), 'Microphone PCM must arrive in 20 ms packets');
     await page.click('#destroy');
     await page.waitForFunction(() => document.querySelector('#status').textContent === 'Destroyed');
     assert.ok(await page.evaluate(() => window.tracks.every((track) => track.readyState === 'ended') && window.contexts.every((context) => context.state === 'closed')));

@@ -57,6 +57,8 @@ The included Pixel Bot is original MIT artwork. Other demo characters, TTS model
 
 `playAudio()` and `startMicrophone()` replace the previous operation. A replaced/cancelled startup rejects with `AbortError`; handle that as intentional cancellation. Other failures reject with the original error. URL fetches obey CORS.
 
+In SDK source (unreleased), `MicrophoneInput` uses the shared audio worklet to emit 20 ms mono `Float32Array` packets at the `AudioContext` sample rate. Its output is muted locally. Worklet module loading is part of setup; cancellation and setup failures release acquired tracks and close the context. The PCM callback and network sending still run on the main thread. The studio's pinned `0.1.0-beta.1` dependency does not include this migration yet.
+
 `TalkingSprite`, `PCMAnalyzer`, `MouthClassifier`, `AudioClipPlayer`, `AudioQueuePlayer`, `StreamingTTSPlayer`, `StreamingPCMPlayer`, `VuiClient`, `MicrophoneInput` and their option types remain available for lower-level integrations. `TalkingSprite.setSampleRate(rate)` resets analysis without reloading images. `setState()` currently stores state; it does not add expressive state animations.
 
 ## AI / TTS integration

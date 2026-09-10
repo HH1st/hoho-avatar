@@ -21,11 +21,9 @@ function setup() {
     close = vi.fn().mockResolvedValue(undefined);
     decodeAudioData = decode;
     sources: any[] = [];
-    processor: any;
     constructor() { contexts.push(this); }
     createBufferSource() { const source = { ...node(), start: vi.fn(), stop: vi.fn(), onended: null }; this.sources.push(source); return source; }
     createMediaStreamSource() { return node(); }
-    createScriptProcessor() { this.processor = { ...node(), onaudioprocess: null }; return this.processor; }
     createGain() { return { ...node(), gain: { value: 1 } }; }
   });
   vi.stubGlobal('AudioWorkletNode', class {
@@ -44,7 +42,7 @@ describe('Avatar SDK', () => {
   afterEach(() => vi.unstubAllGlobals());
 
   it('cancels delayed file decoding when switching to microphone capture', async () => {
-    const { avatar, sprite, decode, contexts, tracks } = setup();
+    const { avatar, sprite, decode, contexts, worklets, tracks } = setup();
     let release!: (metadata: object) => void;
     decode.mockReturnValueOnce(new Promise(resolve => { release = resolve; }));
     const first = avatar.playAudio(new ArrayBuffer(1));
@@ -54,7 +52,7 @@ describe('Avatar SDK', () => {
     await expect(first).rejects.toMatchObject({ name: 'AbortError' });
     expect(contexts[0].sources).toHaveLength(0);
     expect(contexts[0].close).toHaveBeenCalledOnce();
-    contexts[1].processor.onaudioprocess({ inputBuffer: { getChannelData: () => new Float32Array([0.5]) } });
+    worklets[0].port.onmessage({ data: new Float32Array([0.5]) });
     expect(sprite.setSampleRate).toHaveBeenCalledWith(44100);
     expect(sprite.pushPCM).toHaveBeenCalledOnce();
     await avatar.destroy();

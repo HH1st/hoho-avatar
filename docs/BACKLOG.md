@@ -2,11 +2,12 @@
 
 ## Voice agent follow-ups
 
-- move microphone capture from `ScriptProcessorNode` to a 20 ms `AudioWorklet`;
 - add a production deployment example for the Managed Identity gateway;
 - add tool-call handling and explicit tool authorization boundaries;
 - add automatic reconnect and conversation restoration policies (manual retry starts a fresh session today);
 - replace the browser-to-gateway WebSocket with WebRTC when the Azure deployment supports the required server-side control pattern.
+
+Microphone capture has migrated to the shared 20 ms `AudioWorklet` in SDK source. The studio still pins `0.1.0-beta.1`; publish an updated SDK and update its dependency to deliver the migration there.
 
 The browser SDK builds independently from the demo. SDK previews use the public npm `next` tag.
 

@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Move SDK microphone capture from `ScriptProcessorNode` to `AudioWorklet`, using 20 ms mono PCM batches and preserving muted monitoring and cancellation cleanup.
+- Reject pending microphone setup promptly on disposal, including while a worklet module is still downloading.
 - Add a warm Morning appearance alongside Night, with a persistent theme switch and shareable theme URLs.
 - Run Avatar Studio as an independent npm application using the published SDK and its own lockfile.
 - Build GitHub Pages from the example and shared demo assets without checking out SDK source.
