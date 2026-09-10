@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- Fix exception-safe audio teardown, cancellable avatar/file startup and renderer failure recovery through a shared error contract.
+- Preserve character assets and camera across audio changes; separate CharacterStage and StudioAudio from page wiring.
+- Share AudioRuntime/AudioOutput infrastructure and combine mouth states mapped to the same GLB target.
+- Rename Canvas-specific character types/helpers and zero-crossing audio heuristics.
+- Make quickstart install the current SDK tarball using its real manifest via setup:quickstart.
+- Define CharacterState constants, the derived type, CHARACTER_STATES and isCharacterState once in core; validate setState and explicitly map voice-session states in the Studio.
+- Add Oxlint correctness checks to local development, CI and SDK publishing; remove unsafe finally returns and fix TTS cancellation during final audio decoding.
 - Define MouthState runtime constants, the derived type, ordered MOUTH_STATES and isMouthState once in core; share them across classification, both renderers, character validation and Studio previews.
 - Breaking source API: one renderer-neutral createAvatar/Avatar API with explicit canvasRenderer or threeRenderer injection. Remove renderer-specific avatar classes/factories; both implementations expose the same lifecycle, capabilities and view-control contract.
 - Share one MotionController for PCM analysis, mouth classification, blinking and animation scheduling across Canvas and Three.js.

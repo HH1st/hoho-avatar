@@ -1,7 +1,7 @@
 export { MotionController } from "./core/MotionController";
 export { MouthState, MOUTH_STATES, isMouthState } from "./core/MouthState";
-export type { AvatarRenderer, RendererFactory, RendererCapabilities, RenderFrame } from "./core/renderer";
-export { parseCharacterDefinition } from "./core/CharacterDefinition";
+export { CharacterState, CHARACTER_STATES, isCharacterState } from "./core/CharacterState";
+export type { AvatarRenderer, RendererFactory, RendererCapabilities, RendererContext, RenderFrame } from "./core/renderer";
 export { PCMAnalyzer } from "./audio/PCMAnalyzer";
 export { MouthClassifier } from "./audio/MouthClassifier";
 export { AudioClipPlayer } from "./audio-source/AudioClipPlayer";
@@ -20,7 +20,7 @@ export type {
   TTSSynthesizer,
   TTSSynthesisOptions,
 } from "./audio-source/StreamingTTSPlayer";
-export type { AudioFeatures, CharacterDefinition, CharacterState, MotionFrame, SpritePlacement } from "./core/types";
+export type { AudioFeatures, MotionFrame } from "./core/types";
 export { Avatar, createAvatar } from "./core/Avatar";
 export type { AvatarOptions } from "./core/Avatar";
 export { MicrophoneInput } from "./audio-source/MicrophoneInput";

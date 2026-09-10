@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { MouthClassifier } from "../src/audio/MouthClassifier";
 import type { AudioFeatures } from "../src/core/types";
 
-const features = (timestamp: number, rms: number, spectralCentroid = 1000, lowBandRatio = 0.5): AudioFeatures => ({ timestamp, rms, peak: rms, zeroCrossingRate: 0.05, spectralCentroid, lowBandRatio });
+const features = (timestamp: number, rms: number, estimatedFrequencyHz = 1000, roundnessScore = 0.5): AudioFeatures => ({ timestamp, rms, peak: rms, zeroCrossingRate: 0.05, estimatedFrequencyHz, roundnessScore });
 
 describe("MouthClassifier", () => {
   it("classifies loud input as large", () => {

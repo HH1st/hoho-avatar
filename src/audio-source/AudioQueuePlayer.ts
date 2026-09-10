@@ -1,4 +1,5 @@
-import processorUrl from "./audio-clip-processor.ts?worker&url";
+import { AudioOutput } from "./AudioOutput";
+import { abortError } from "../internal/abort";
 import type { AudioClipMetadata } from "./AudioClipPlayer";
 
 export interface AudioQueuePlayerOptions {
@@ -13,11 +14,8 @@ export interface AudioQueuePlayerOptions {
  * across clip boundaries.
  */
 export class AudioQueuePlayer {
-  private readonly context = new AudioContext();
-  private readonly workletReady = this.createWorklet();
-  private readonly sources = new Set<AudioBufferSourceNode>();
-  private worklet?: AudioWorkletNode;
-  private nextStartTime = 0;
+  private readonly output: AudioOutput;
+  private operation = new AbortController();
   private generation = 0;
   private started = false;
   private ending = false;
@@ -25,22 +23,25 @@ export class AudioQueuePlayer {
   private pendingAppends = 0;
   private appendTail: Promise<void> = Promise.resolve();
 
-  constructor(private readonly options: AudioQueuePlayerOptions) {}
+  constructor(private readonly options: AudioQueuePlayerOptions) {
+    this.output = new AudioOutput(options.onPCM, () => this.finishIfDrained());
+  }
 
   get active(): boolean {
-    return this.started || this.sources.size > 0 || this.pendingAppends > 0;
+    return this.started || this.output.active || this.pendingAppends > 0;
   }
 
   async prepare(): Promise<void> {
     this.assertActive();
-    await Promise.all([this.workletReady, this.context.resume()]);
+    await this.output.runtime.wait(this.output.prepare(), this.operation.signal);
   }
 
   async append(input: Blob | ArrayBuffer): Promise<AudioClipMetadata> {
     this.assertActive();
     const generation = this.generation;
     this.pendingAppends += 1;
-    const operation = this.appendTail.then(() => this.appendInOrder(input, generation));
+    const signal = this.operation.signal;
+    const operation = this.output.runtime.wait(this.appendTail.then(() => this.appendInOrder(input, generation, signal)), signal);
     this.appendTail = operation.then(() => undefined, () => undefined);
     try {
       return await operation;
@@ -52,10 +53,11 @@ export class AudioQueuePlayer {
     }
   }
 
-  private async appendInOrder(input: Blob | ArrayBuffer, generation: number): Promise<AudioClipMetadata> {
+  private async appendInOrder(input: Blob | ArrayBuffer, generation: number, signal: AbortSignal): Promise<AudioClipMetadata> {
     if (generation !== this.generation) throw new DOMException("Audio append was cancelled", "AbortError");
-    const encoded = input instanceof ArrayBuffer ? input.slice(0) : await input.arrayBuffer();
-    const buffer = await this.context.decodeAudioData(encoded);
+    const encoded = input instanceof ArrayBuffer ? input.slice(0) : await this.output.runtime.wait(input.arrayBuffer(), signal);
+    signal.throwIfAborted();
+    const buffer = await this.output.runtime.wait(this.output.context.decodeAudioData(encoded), signal);
     await this.prepare();
     if (generation !== this.generation) throw new DOMException("Audio append was cancelled", "AbortError");
 
@@ -65,24 +67,12 @@ export class AudioQueuePlayer {
       channels: buffer.numberOfChannels,
     };
     if (!this.started) {
-      await this.options.onPlaybackStart?.(metadata);
+      await this.output.runtime.wait(Promise.resolve(this.options.onPlaybackStart?.(metadata)), signal);
       if (generation !== this.generation) throw new DOMException("Audio append was cancelled", "AbortError");
       this.started = true;
     }
 
-    const source = this.context.createBufferSource();
-    source.buffer = buffer;
-    source.connect(this.worklet!);
-    const startAt = Math.max(this.nextStartTime, this.context.currentTime + 0.02);
-    this.nextStartTime = startAt + buffer.duration;
-    this.sources.add(source);
-    source.onended = () => {
-      if (generation !== this.generation) return;
-      source.disconnect();
-      this.sources.delete(source);
-      this.finishIfDrained();
-    };
-    source.start(startAt);
+    this.output.append(buffer);
     return metadata;
   }
 
@@ -96,52 +86,25 @@ export class AudioQueuePlayer {
     this.assertActive();
     ++this.generation;
     this.appendTail = Promise.resolve();
-    for (const source of this.sources) {
-      source.onended = null;
-      try {
-        source.stop();
-      } catch {
-        // A scheduled source may already have ended.
-      }
-      source.disconnect();
-    }
-    this.sources.clear();
+    this.operation.abort(abortError());
+    this.operation = new AbortController();
+    this.output.stop();
     this.pendingAppends = 0;
-    this.nextStartTime = 0;
     this.started = false;
     this.ending = false;
   }
 
   async destroy(): Promise<void> {
-    if (this.destroyed) return;
+    if (this.destroyed) { await this.output.destroy(); return; }
     this.stop();
     this.destroyed = true;
-    this.worklet?.port.close();
-    this.worklet?.disconnect();
-    this.worklet = undefined;
-    await this.context.close();
-  }
-
-  private async createWorklet(): Promise<void> {
-    await this.context.audioWorklet.addModule(processorUrl);
-    if (this.destroyed) return;
-    const worklet = new AudioWorkletNode(this.context, "audio-clip-processor", {
-      numberOfInputs: 1,
-      numberOfOutputs: 1,
-      channelCountMode: "max",
-    });
-    worklet.port.onmessage = (event: MessageEvent<Float32Array>) => {
-      if (this.sources.size > 0) this.options.onPCM(event.data);
-    };
-    worklet.connect(this.context.destination);
-    this.worklet = worklet;
+    await this.output.destroy();
   }
 
   private finishIfDrained(): void {
-    if (!this.ending || this.pendingAppends > 0 || this.sources.size > 0) return;
+    if (!this.ending || this.pendingAppends > 0 || this.output.active) return;
     this.ending = false;
     this.started = false;
-    this.nextStartTime = 0;
     this.options.onEnded?.();
   }
 

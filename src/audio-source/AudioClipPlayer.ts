@@ -1,4 +1,5 @@
-import processorUrl from "./audio-clip-processor.ts?worker&url";
+import { AudioRuntime } from "./AudioRuntime";
+import { abortError } from "../internal/abort";
 
 export interface AudioClipMetadata {
   name?: string;
@@ -16,8 +17,9 @@ export interface AudioClipPlayerOptions {
 export type AudioClipPlayerState = "empty" | "loading" | "ready" | "playing" | "error" | "destroyed";
 
 export class AudioClipPlayer {
-  private readonly context = new AudioContext();
-  private readonly workletReady = this.context.audioWorklet.addModule(processorUrl);
+  private readonly runtime = new AudioRuntime();
+  private readonly context = this.runtime.context;
+  private operation = new AbortController();
   private buffer?: AudioBuffer;
   private source?: AudioBufferSourceNode;
   private worklet?: AudioWorkletNode;
@@ -36,19 +38,23 @@ export class AudioClipPlayer {
   /** Resume audio from a user gesture before an asynchronous source is ready. */
   async prepare(): Promise<void> {
     this.assertActive();
-    await Promise.all([this.workletReady, this.context.resume()]);
+    await this.runtime.wait(this.runtime.prepare(), this.operation.signal);
   }
 
   async load(input: File | Blob | ArrayBuffer): Promise<AudioClipMetadata> {
     this.assertActive();
+    this.operation.abort(abortError());
+    this.operation = new AbortController();
     this.stopSource();
     const generation = ++this.generation;
     this.buffer = undefined;
     this.currentState = "loading";
 
+    const signal = this.operation.signal;
     try {
-      const encoded = input instanceof ArrayBuffer ? input.slice(0) : await input.arrayBuffer();
-      const [buffer] = await Promise.all([this.context.decodeAudioData(encoded), this.workletReady]);
+      const encoded = input instanceof ArrayBuffer ? input.slice(0) : await this.runtime.wait(input.arrayBuffer(), signal);
+      signal.throwIfAborted();
+      const [buffer] = await this.runtime.wait(Promise.all([this.context.decodeAudioData(encoded), this.runtime.loadWorklet()]), signal);
       if (generation !== this.generation) throw new DOMException("Audio load was replaced", "AbortError");
 
       this.buffer = buffer;
@@ -131,7 +137,9 @@ export class AudioClipPlayer {
 
   stop(): void {
     this.assertActive();
-    if (this.currentState !== "playing") return;
+    this.operation.abort(abortError());
+    this.operation = new AbortController();
+    if (this.currentState !== "playing" && this.currentState !== "loading") return;
     ++this.generation;
     this.stopSource();
     this.currentState = this.buffer ? "ready" : "empty";
@@ -139,18 +147,19 @@ export class AudioClipPlayer {
   }
 
   async destroy(): Promise<void> {
-    if (this.currentState === "destroyed") return;
+    if (this.currentState === "destroyed") { await this.runtime.destroy(); return; }
+    this.operation.abort(abortError());
     ++this.generation;
     this.stopSource();
     this.buffer = undefined;
     this.currentState = "destroyed";
-    await this.context.close();
+    await this.runtime.destroy();
   }
 
   private handleEnded(generation: number): void {
     if (generation !== this.generation || this.currentState !== "playing") return;
     this.stopSource(false);
-    this.currentState = "ready";
+    this.currentState = this.buffer ? "ready" : "empty";
     this.options.onProgress?.(0, this.buffer?.duration ?? 0);
     this.options.onEnded?.();
   }

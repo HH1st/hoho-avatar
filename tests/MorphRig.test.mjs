@@ -11,6 +11,22 @@ async function loadMochi() {
   return new GLTFLoader().parseAsync(file.buffer.slice(file.byteOffset, file.byteOffset + file.byteLength), '');
 }
 describe('Blender / Three.js morph contract', () => {
+  it('combines states mapped to the same target before applying smoothing', () => {
+    const geometry = new BufferGeometry();
+    geometry.setAttribute('position', new Float32BufferAttribute([0, 0, 0], 3));
+    const target = new Float32BufferAttribute([0, 1, 0], 3); target.name = 'jawOpen';
+    geometry.morphAttributes.position = [target];
+    const mesh = new Mesh(geometry);
+    const rig = new MorphRig(mesh, { mouth: { small: 'jawOpen', large: 'jawOpen', wide: 'jawOpen', round: 'jawOpen' } });
+    for (const state of MOUTH_STATES.filter((state) => state !== MouthState.Closed)) {
+      rig.reset();
+      for (let i = 0; i < 20; i++) rig.update({ mouth: state }, false, 0.1);
+      expect(mesh.morphTargetInfluences[0]).toBeGreaterThan(0.99);
+    }
+    for (let i = 0; i < 20; i++) rig.update({ mouth: MouthState.Closed }, false, 0.1);
+    expect(mesh.morphTargetInfluences[0]).toBeLessThan(0.01);
+    disposeObject(mesh);
+  });
   it('loads the exported GLB and animates all four mouths plus both eyelids', async () => {
     const { scene } = await loadMochi();
     const rig = new MorphRig(scene);

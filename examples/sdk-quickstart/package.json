@@ -3,6 +3,6 @@
   "private": true,
   "type": "module",
   "scripts": { "dev": "vite", "build": "vite build" },
-  "dependencies": { "@hh1st/hoho-avatar": "0.1.0-beta.1" },
+  "dependencies": { "@hh1st/hoho-avatar": "file:./hoho-avatar-sdk.tgz" },
   "devDependencies": { "vite": "^8.2.0", "typescript": "^7.0.2" }
 }

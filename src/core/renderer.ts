@@ -30,4 +30,9 @@ export interface AvatarRenderer {
   destroy(): void;
 }
 
-export type RendererFactory = (canvas: HTMLCanvasElement) => AvatarRenderer;
+export interface RendererContext {
+  /** Asynchronous rendering failures, such as loss of the graphics context. */
+  onError(error: Error): void;
+}
+
+export type RendererFactory = (canvas: HTMLCanvasElement, context?: RendererContext) => AvatarRenderer;

@@ -2,6 +2,16 @@ import { describe, expect, it } from "vitest";
 import { PCMAnalyzer } from "../src/audio/PCMAnalyzer";
 
 describe("PCMAnalyzer", () => {
+  it('names zero-crossing heuristics explicitly rather than reporting spectral measurements', () => {
+    const analyzer = new PCMAnalyzer({ sampleRate: 1000 });
+    const features = analyzer.analyze([1, -1, 1, -1]);
+    expect(features.estimatedFrequencyHz).toBe(500);
+    expect(features.roundnessScore).toBe(0);
+    expect(features).not.toHaveProperty('spectralCentroid');
+    expect(features).not.toHaveProperty('lowBandRatio');
+    expect(() => new PCMAnalyzer({ sampleRate: NaN })).toThrow('finite');
+    expect(() => new PCMAnalyzer({ sampleRate: 48_000, windowMs: Infinity })).toThrow('finite');
+  });
   it("normalizes Int16 PCM and computes RMS", () => {
     const analyzer = new PCMAnalyzer({ sampleRate: 1000, windowMs: 2 });
     const [features] = analyzer.push(new Int16Array([32767, -32768]), 10);

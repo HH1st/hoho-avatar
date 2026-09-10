@@ -54,6 +54,8 @@ threeRenderer() and canvasRenderer() implement the same RendererFactory. Both su
 
 ## Model contract
 
+Pass signal and onError to createAvatar(), rather than threeRenderer(). Several mouth states may map to one model target such as jawOpen. MorphRig combines bindings by mesh and target index and smooths each target once per frame; iteration order does not change the result.
+
 The shared core MouthState constants and MOUTH_STATES list define mouth semantics for both renderers. The Three.js adapter maps every non-closed state to mouth_ followed by that value, with Basis representing MouthState.Closed. Custom Blender names may override this mapping but do not create another enum.
 
 Export a binary glTF 2.0 (`.glb`) with embedded materials/buffers/images. The front faces +Z, with +Y up. The renderer centers and scales the model into its stage. The demo caps imports at 25 MB. External resource URIs are rejected; Draco/KTX2 and VRM extensions are not configured.

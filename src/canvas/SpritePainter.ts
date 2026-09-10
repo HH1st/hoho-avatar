@@ -1,10 +1,10 @@
 import type { MotionFrame } from "../core/types";
-import type { LoadedCharacter } from "./AssetLoader";
+import type { LoadedSpriteCharacter } from "./SpriteAssetLoader";
 
-export class SpriteRenderer {
+export class SpritePainter {
   private readonly context: CanvasRenderingContext2D;
 
-  constructor(private readonly canvas: HTMLCanvasElement, private readonly character: LoadedCharacter) {
+  constructor(private readonly canvas: HTMLCanvasElement, private readonly character: LoadedSpriteCharacter) {
     const context = canvas.getContext("2d");
     if (!context) throw new Error("Canvas 2D is not available");
     this.context = context;

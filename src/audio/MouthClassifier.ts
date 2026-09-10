@@ -61,8 +61,8 @@ export class MouthClassifier {
   private rawState(features: AudioFeatures): MouthState {
     if (features.rms < this.options.silenceThreshold) return MouthState.Closed;
     if (features.rms > this.options.loudThreshold) return MouthState.Large;
-    if (features.spectralCentroid > this.options.highFrequencyThreshold) return MouthState.Wide;
-    if (features.lowBandRatio > this.options.roundThreshold) return MouthState.Round;
+    if (features.estimatedFrequencyHz > this.options.highFrequencyThreshold) return MouthState.Wide;
+    if (features.roundnessScore > this.options.roundThreshold) return MouthState.Round;
     return MouthState.Small;
   }
 }

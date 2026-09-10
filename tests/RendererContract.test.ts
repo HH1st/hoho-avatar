@@ -5,8 +5,9 @@ import { Avatar, createAvatar } from '../src/core/Avatar';
 import { canvasRenderer } from '../src/canvas';
 import { threeRenderer } from '../src/three';
 import type { RendererFactory } from '../src/core/renderer';
-import type { CharacterDefinition } from '../src/core/types';
+import type { SpriteCharacterDefinition } from '../src/canvas';
 import { MOUTH_STATES } from '../src/core/MouthState';
+import { CharacterState, CHARACTER_STATES } from '../src/core/CharacterState';
 
 vi.mock('three', async (original) => {
   const actual = await original<typeof import('three')>();
@@ -18,7 +19,7 @@ vi.mock('three', async (original) => {
 vi.mock('three/addons/controls/OrbitControls.js', () => ({ OrbitControls: class {
   target = { set() {} }; update() {} dispose() {}
 } }));
-const character: CharacterDefinition = {
+const character: SpriteCharacterDefinition = {
   version: 1, canvas: { width: 128, height: 128 }, body: { src: 'body.png' },
   mouth: { anchor: { x: 64, y: 70 }, sprites: { closed: 'c.png', small: 's.png', large: 'l.png', wide: 'w.png', round: 'r.png' } },
   eyes: { anchor: { x: 64, y: 30 }, sprites: { open: 'o.png', closed: 'b.png' } },
@@ -52,7 +53,12 @@ describe.each(['canvas', 'three'] as const)('%s implements the same Avatar contr
     expect(avatar.capabilities.blink).toBe(true);
     expect(avatar.capabilities.viewControl).toBe(kind === 'three');
     avatar.resize(); avatar.resetView(); avatar.setViewControlEnabled(false);
-    avatar.setState('thinking'); expect(avatar.getState()).toBe('thinking');
+    expect(avatar.getState()).toBe(CharacterState.Idle);
+    for (const state of CHARACTER_STATES) {
+      avatar.setState(state); expect(avatar.getState()).toBe(state);
+    }
+    expect(() => avatar.setState('connecting' as never)).toThrow('Unknown character state');
+    expect(avatar.getState()).toBe(CharacterState.Speaking);
     avatar.pushPCM(new Float32Array(1440).fill(0.3));
     expect(avatar.getMotionFrame().mouth).toBe('large');
     avatar.previewMouth('round'); avatar.previewBlink(true); avatar.resetAudio();
@@ -62,5 +68,21 @@ describe.each(['canvas', 'three'] as const)('%s implements the same Avatar contr
     await avatar.destroy(); await avatar.destroy();
     expect(() => avatar.pushPCM(new Float32Array())).toThrow('destroyed');
     expect(() => avatar.resetView()).toThrow('destroyed');
+  });
+  it('routes asynchronous renderer errors through the common Avatar callback', async () => {
+    const onError = vi.fn();
+    let context: import('../src/core/renderer').RendererContext | undefined;
+    const error = new Error('graphics context lost');
+    const avatar = await createAvatar({} as HTMLCanvasElement, { onError, renderer: (_canvas, callbacks) => {
+      context = callbacks;
+      return { ready: Promise.resolve(), capabilities: { mouth: [], blink: false, viewControl: false },
+        render() {}, reset() {}, resize() {}, resetView() {}, setViewControlEnabled() {}, destroy() {} };
+    } });
+    context!.onError(error);
+    expect(onError).toHaveBeenCalledExactlyOnceWith(error);
+    expect(cancelAnimationFrame).toHaveBeenCalled();
+    avatar.start();
+    expect(requestAnimationFrame).toHaveBeenCalledTimes(2);
+    await avatar.destroy();
   });
 });

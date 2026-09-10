@@ -27,8 +27,8 @@ for (const state of Object.keys(character.eyes.sprites)) lines.push('character.e
 lines.push('export default character;');
 await writeFile('dist-sdk/characters/pixel-bot.js', lines.join('\n') + '\n');
 await writeFile('dist-sdk/characters/pixel-bot.d.ts', [
-  'import type { CharacterDefinition } from "../types/core/types.js";',
-  'declare const character: CharacterDefinition;',
+  'import type { SpriteCharacterDefinition } from "../types/canvas/SpriteCharacterDefinition.js";',
+  'declare const character: SpriteCharacterDefinition;',
   'export default character;',
 ].join('\n') + '\n');
 await writeFile(assetDir + '/LICENSE', await readFile('LICENSE'));

@@ -12,7 +12,8 @@ export class PCMAnalyzer {
   private pendingLength = 0;
 
   constructor({ sampleRate, windowMs = 30 }: PCMAnalyzerOptions) {
-    if (sampleRate <= 0) throw new Error("sampleRate must be positive");
+    if (!Number.isFinite(sampleRate) || sampleRate <= 0) throw new Error("sampleRate must be positive and finite");
+    if (!Number.isFinite(windowMs) || windowMs <= 0) throw new Error('windowMs must be positive and finite');
     this.sampleRate = sampleRate;
     this.windowSize = Math.max(1, Math.round((sampleRate * windowMs) / 1000));
     this.pending = new Float32Array(this.windowSize);
@@ -34,7 +35,7 @@ export class PCMAnalyzer {
   }
 
   analyze(samples: ArrayLike<number>, timestamp = performance.now()): AudioFeatures {
-    if (!samples.length) return { timestamp, rms: 0, peak: 0, zeroCrossingRate: 0, spectralCentroid: 0, lowBandRatio: 1 };
+    if (!samples.length) return { timestamp, rms: 0, peak: 0, zeroCrossingRate: 0, estimatedFrequencyHz: 0, roundnessScore: 1 };
     let sumSquares = 0;
     let peak = 0;
     let crossings = 0;
@@ -54,8 +55,8 @@ export class PCMAnalyzer {
       rms: Math.sqrt(sumSquares / samples.length),
       peak,
       zeroCrossingRate,
-      spectralCentroid: zeroCrossingRate * (this.sampleRate / 2),
-      lowBandRatio: Math.max(0, Math.min(1, 1 - zeroCrossingRate / 0.18)),
+      estimatedFrequencyHz: zeroCrossingRate * (this.sampleRate / 2),
+      roundnessScore: Math.max(0, Math.min(1, 1 - zeroCrossingRate / 0.18)),
     };
   }
 

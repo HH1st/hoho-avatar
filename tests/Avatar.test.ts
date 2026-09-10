@@ -138,4 +138,34 @@ describe('Avatar SDK', () => {
     avatar.pushPCM(new Float32Array([0]));
     await avatar.destroy();
   });
+
+  it('releases microphone resources even when resetting motion throws', async () => {
+    const { avatar, sprite, tracks, contexts } = setup();
+    await avatar.startMicrophone();
+    sprite.resetAudio.mockImplementation(() => { throw new Error('listener failed'); });
+    expect(() => avatar.stopAudio()).toThrow('listener failed');
+    expect(tracks[0].stop).toHaveBeenCalledOnce();
+    expect(contexts[0].close).toHaveBeenCalledOnce();
+    await expect(avatar.destroy()).rejects.toThrow('cleanup callbacks');
+    expect(sprite.destroy).toHaveBeenCalledOnce();
+    await expect(avatar.destroy()).rejects.toThrow('cleanup callbacks');
+    expect(sprite.destroy).toHaveBeenCalledOnce();
+  });
+
+  it('cancels creation before the renderer is ready and destroys it once', async () => {
+    setup();
+    const renderer = { ready: new Promise<void>(() => {}), destroy: vi.fn() };
+    const abort = new AbortController();
+    const pending = createAvatar({} as HTMLCanvasElement, { renderer: () => renderer as never, signal: abort.signal });
+    const rejected = expect(pending).rejects.toMatchObject({ name: 'AbortError' });
+    abort.abort();
+    await rejected;
+    expect(renderer.destroy).toHaveBeenCalledOnce();
+  });
+
+  it('skips renderer construction for an already cancelled request', async () => {
+    const renderer = vi.fn();
+    await expect(createAvatar({} as HTMLCanvasElement, { renderer, signal: AbortSignal.abort() })).rejects.toMatchObject({ name: 'AbortError' });
+    expect(renderer).not.toHaveBeenCalled();
+  });
 });

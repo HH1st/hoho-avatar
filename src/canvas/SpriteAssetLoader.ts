@@ -1,9 +1,10 @@
-import { parseCharacterDefinition } from "../core/CharacterDefinition";
-import type { CharacterDefinition, MouthState } from "../core/types";
+import { parseSpriteCharacterDefinition } from "./parseSpriteCharacter";
+import type { SpriteCharacterDefinition } from "./SpriteCharacterDefinition";
+import type { MouthState } from "../core/types";
 import { MOUTH_STATES } from '../core/MouthState';
 
-export interface LoadedCharacter {
-  definition: CharacterDefinition;
+export interface LoadedSpriteCharacter {
+  definition: SpriteCharacterDefinition;
   body: HTMLImageElement;
   mouths: Record<MouthState, HTMLImageElement>;
   eyes?: Record<"open" | "closed", HTMLImageElement>;
@@ -20,19 +21,19 @@ const loadImage = (src: string, signal?: AbortSignal): Promise<HTMLImageElement>
   image.src = src;
 });
 
-export async function loadCharacter(source: string | CharacterDefinition, signal?: AbortSignal): Promise<LoadedCharacter> {
+export async function loadSpriteCharacter(source: string | SpriteCharacterDefinition, signal?: AbortSignal): Promise<LoadedSpriteCharacter> {
   signal?.throwIfAborted();
-  let definition: CharacterDefinition;
+  let definition: SpriteCharacterDefinition;
   let baseUrl = document.baseURI;
 
   if (typeof source === "string") {
     const configUrl = new URL(source, document.baseURI);
     const response = await fetch(configUrl, { signal });
     if (!response.ok) throw new Error(`Unable to load character: ${response.status}`);
-    definition = parseCharacterDefinition(await response.json());
+    definition = parseSpriteCharacterDefinition(await response.json());
     baseUrl = configUrl.href;
   } else {
-    definition = parseCharacterDefinition(source);
+    definition = parseSpriteCharacterDefinition(source);
   }
 
   const resolve = (path: string) => new URL(path, baseUrl).href;

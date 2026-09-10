@@ -4,8 +4,9 @@ import {
 } from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import type { AvatarRenderer, RenderFrame, RendererCapabilities } from '../core/renderer';
+import type { AvatarRenderer, RenderFrame, RendererCapabilities, RendererContext } from '../core/renderer';
 import type { MouthState } from '../core/types';
+import { CharacterState } from '../core/CharacterState';
 import { MorphRig, type MorphRigOptions } from './MorphRig';
 import { disposeObject } from './dispose';
 
@@ -16,7 +17,6 @@ export interface ThreeRendererOptions {
   background?: string | null;
   orbit?: boolean;
   pixelRatio?: number;
-  onError?: (error: Error) => void;
 }
 
 /** Rendering only: owns the GLB, scene, controls and GPU resources. */
@@ -33,10 +33,10 @@ export class ThreeRenderer implements AvatarRenderer {
   private destroyed = false;
   private readonly contextLost = (event: Event) => {
     event.preventDefault();
-    this.options.onError?.(new Error('3D graphics context lost. Reload the page to restore the stage.'));
+    this.context?.onError(new Error('3D graphics context lost. Reload the page to restore the stage.'));
   };
 
-  constructor(private readonly canvas: HTMLCanvasElement, private readonly options: ThreeRendererOptions) {
+  constructor(private readonly canvas: HTMLCanvasElement, options: ThreeRendererOptions, private readonly context?: RendererContext) {
     if (options.pixelRatio !== undefined && (!Number.isFinite(options.pixelRatio) || options.pixelRatio <= 0)) throw new Error('pixelRatio must be positive and finite');
     this.renderer = new WebGLRenderer({ canvas, antialias: true, alpha: options.background === null });
     this.renderer.setPixelRatio(Math.min(options.pixelRatio ?? globalThis.devicePixelRatio ?? 1, 2));
@@ -132,7 +132,7 @@ export class ThreeRenderer implements AvatarRenderer {
     if (this.destroyed) return;
     this.rig?.update(frame.motion, frame.eyesClosed, frame.deltaSeconds);
     this.pivot.position.y = Math.sin(frame.timestamp * 0.0018) * 0.024 + frame.motion.energy * 0.035;
-    this.pivot.rotation.z = frame.state === 'thinking' ? 0.08 : Math.sin(frame.timestamp * 0.001) * 0.018;
+    this.pivot.rotation.z = frame.state === CharacterState.Thinking ? 0.08 : Math.sin(frame.timestamp * 0.001) * 0.018;
     this.controls.update(); this.renderer.render(this.scene, this.camera);
   }
   destroy(): void {

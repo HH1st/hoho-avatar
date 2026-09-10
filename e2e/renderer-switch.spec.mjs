@@ -40,6 +40,22 @@ test('one studio switches 2D and 3D without loading Three.js for a 2D visit', as
   await page.screenshot({ path: 'tmp/unified-studio.png', fullPage: true });
   expect(errors).toEqual([]);
 });
+
+test('changing audio providers and replaying a sample preserves the loaded model and canvas', async ({ page }) => {
+  const models = [];
+  page.on('request', (request) => { if (request.url().endsWith('/models/mochi/mochi.glb')) models.push(request.url()); });
+  await page.goto('./?character=mochi');
+  await expect(page.locator('.stage-wrap')).toHaveAttribute('data-loaded', 'true');
+  await page.evaluate(() => { window.firstCanvas = document.querySelector('#avatar'); });
+  for (const provider of ['file', 'tts', 'mic', 'file']) await page.locator('#tab-' + provider).click();
+  for (let i = 0; i < 2; i++) {
+    await page.locator('#sampleAudioButton').click();
+    await expect(page.locator('#statusText')).toHaveText('AUDIO LIVE');
+    await page.locator('#audioStopButton').click();
+  }
+  expect(models).toHaveLength(1);
+  expect(await page.evaluate(() => document.querySelector('#avatar') === window.firstCanvas)).toBe(true);
+});
 test('the same microphone and file controls drive either renderer', async ({ page }) => {
   await page.goto('./?character=mochi');
   await expect(page.locator('.stage-wrap')).toHaveAttribute('data-loaded', 'true');

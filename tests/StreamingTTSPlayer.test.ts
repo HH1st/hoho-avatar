@@ -36,7 +36,7 @@ class FakeSource {
 }
 
 class FakeWorkletNode {
-  readonly port = { close: vi.fn(), onmessage: null as ((event: MessageEvent<Float32Array>) => void) | null };
+  readonly port = { close: vi.fn(), postMessage: vi.fn(), onmessage: null as ((event: MessageEvent<Float32Array>) => void) | null };
   readonly connect = vi.fn();
   readonly disconnect = vi.fn();
 }
@@ -177,6 +177,41 @@ describe("StreamingTTSPlayer", () => {
     await vi.waitFor(() => expect(player.state).toBe("error"));
     expect(states).toEqual(["synthesizing", "error"]);
     expect(onError).toHaveBeenCalledOnce();
+    await player.destroy();
+  });
+
+  it("finishes cancellation during the final prebuffer decode and accepts another utterance", async () => {
+    const synthesize = vi.fn(async (text: string) => new Blob([text]));
+    const player = new StreamingTTSPlayer({ synthesize, onPCM: vi.fn(), prebufferChunks: 2 });
+    let finishDecode!: (buffer: object) => void;
+    context.decodeAudioData.mockReturnValueOnce(new Promise((resolve) => { finishDecode = resolve; }));
+    player.speakComplete("Only one phrase, decoded when the prebuffer is flushed.");
+    await vi.waitFor(() => expect(context.decodeAudioData).toHaveBeenCalledOnce());
+    player.stop();
+    expect(player.state).toBe("stopping");
+    expect(() => player.speakComplete("Must wait for cleanup.")).toThrow(/still stopping/);
+    finishDecode({ duration: 1, numberOfChannels: 1, sampleRate: 48000 });
+    await vi.waitFor(() => expect(player.state).toBe("idle"));
+    expect(context.sources).toHaveLength(0);
+    player.speakComplete("A fresh utterance.");
+    await vi.waitFor(() => expect(context.sources).toHaveLength(1));
+    expect(synthesize).toHaveBeenCalledTimes(2);
+    await player.destroy();
+  });
+
+  it("reports a final prebuffer decode failure and can retry", async () => {
+    const error = new Error("Invalid synthesized audio");
+    const onError = vi.fn();
+    const player = new StreamingTTSPlayer({
+      synthesize: async (text) => new Blob([text]), onPCM: vi.fn(), onError, prebufferChunks: 2,
+    });
+    context.decodeAudioData.mockRejectedValueOnce(error);
+    player.speakComplete("A phrase that cannot be decoded.");
+    await vi.waitFor(() => expect(player.state).toBe("error"));
+    expect(onError).toHaveBeenCalledExactlyOnceWith(error);
+    expect(context.sources).toHaveLength(0);
+    player.speakComplete("Try a valid phrase.");
+    await vi.waitFor(() => expect(context.sources).toHaveLength(1));
     await player.destroy();
   });
 });

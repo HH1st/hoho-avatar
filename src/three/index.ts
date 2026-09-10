@@ -5,5 +5,5 @@ export type { ThreeRendererOptions } from './ThreeRenderer';
 export { MorphRig } from './MorphRig';
 export type { MorphRigOptions } from './MorphRig';
 export function threeRenderer(options: ThreeRendererOptions): RendererFactory {
-  return (canvas) => new ThreeRenderer(canvas, options);
+  return (canvas, context) => new ThreeRenderer(canvas, options, context);
 }

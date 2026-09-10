@@ -1,9 +1,9 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { CanvasRenderer } from "../src/canvas";
 import { MotionController } from "../src/core/MotionController";
-import type { CharacterDefinition } from "../src/core/types";
+import type { SpriteCharacterDefinition } from "../src/canvas";
 
-const character: CharacterDefinition = {
+const character: SpriteCharacterDefinition = {
   version: 1,
   canvas: { width: 128, height: 128 },
   body: { src: "body.png" },

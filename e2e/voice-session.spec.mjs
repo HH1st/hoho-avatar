@@ -220,15 +220,16 @@ test("switching provider while the gateway health request is pending cancels sta
 });
 
 test("ending during avatar loading keeps the avatar visible without starting capture", async ({ page }) => {
-  const mock = await setup(page);
   let release;
   await page.route("**/characters/niu-lai/character.json", async (route) => {
     const response = await route.fetch();
     await new Promise((resolve) => { release = resolve; });
     await route.fulfill({ response });
   });
-  await page.locator("#agentConnectButton").click();
+  const mock = await setup(page);
   await expect.poll(() => Boolean(release)).toBe(true);
+  await page.locator("#agentConnectButton").click();
+  await expect.poll(() => mock.sockets.length).toBe(1);
   await page.locator("#agentDisconnectButton").click();
   release();
   await expect(page.locator("#agentStatus")).toHaveText("DISCONNECTED");

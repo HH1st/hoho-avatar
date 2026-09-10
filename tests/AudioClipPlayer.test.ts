@@ -100,4 +100,34 @@ describe("AudioClipPlayer", () => {
     expect(context.sources).toHaveLength(0);
     expect(player.state).toBe("ready");
   });
+
+  it('settles preparation immediately on destroy while a module download is pending', async () => {
+    const player = new AudioClipPlayer({ onPCM: vi.fn() });
+    const module = deferred<void>();
+    context.audioWorklet.addModule.mockReturnValue(module.promise);
+    const pending = player.prepare();
+    const rejected = expect(pending).rejects.toMatchObject({ name: 'AbortError' });
+    await player.destroy();
+    await rejected;
+    module.reject(new Error('late network failure'));
+    resume.resolve();
+    expect(context.sources).toHaveLength(0);
+    expect(context.close).toHaveBeenCalledOnce();
+  });
+
+  it('cancels a pending decode and accepts a new file without waiting for the old decode', async () => {
+    const player = new AudioClipPlayer({ onPCM: vi.fn() });
+    const decode = deferred<AudioBuffer>();
+    context.decodeAudioData.mockReturnValueOnce(decode.promise);
+    const pending = player.load(new ArrayBuffer(1));
+    const rejected = expect(pending).rejects.toMatchObject({ name: 'AbortError' });
+    player.stop(); await rejected;
+    expect(player.state).toBe('empty');
+    await player.load(new ArrayBuffer(2));
+    expect(player.state).toBe('ready');
+    decode.resolve({ duration: 99, sampleRate: 1000, numberOfChannels: 1 } as AudioBuffer);
+    resume.resolve(); await player.play();
+    expect(context.sources[0]?.buffer?.duration).toBe(2);
+    await player.destroy();
+  });
 });

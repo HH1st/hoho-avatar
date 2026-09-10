@@ -1,5 +1,5 @@
-import type { CharacterDefinition, SpritePlacement } from "./types";
-import { MOUTH_STATES } from './MouthState';
+import type { SpriteCharacterDefinition, SpritePlacement } from "./SpriteCharacterDefinition";
+import { MOUTH_STATES } from '../core/MouthState';
 
 const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === "object" && value !== null;
 const isFiniteNumber = (value: unknown): value is number => typeof value === "number" && Number.isFinite(value);
@@ -22,7 +22,7 @@ function requirePlacement(value: unknown, label: string): asserts value is Sprit
 }
 
 /** Validate untrusted JSON before it reaches the renderer or asset loader. */
-export function parseCharacterDefinition(value: unknown): CharacterDefinition {
+export function parseSpriteCharacterDefinition(value: unknown): SpriteCharacterDefinition {
   if (!isRecord(value) || value.version !== 1) throw new Error("character.json must use version 1.");
   if (!isRecord(value.canvas) || !isFiniteNumber(value.canvas.width) || !isFiniteNumber(value.canvas.height)
     || value.canvas.width <= 0 || value.canvas.height <= 0) {
@@ -49,5 +49,5 @@ export function parseCharacterDefinition(value: unknown): CharacterDefinition {
       throw new Error("animation.bodyBouncePx must be a non-negative finite number.");
     }
   }
-  return value as unknown as CharacterDefinition;
+  return value as unknown as SpriteCharacterDefinition;
 }

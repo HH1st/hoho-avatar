@@ -62,6 +62,18 @@ Since `0.1.0-beta.2`, `MicrophoneInput` uses the shared audio worklet to emit 20
 
 ## One interface, two implementations
 
+Character interaction states follow the same shared-definition pattern as mouth states:
+
+~~~ts
+import { CharacterState, CHARACTER_STATES, isCharacterState } from '@hh1st/hoho-avatar';
+
+avatar.setState(CharacterState.Thinking);
+if (isCharacterState(value)) avatar.setState(value);
+// CHARACTER_STATES: idle, listening, thinking, speaking
+~~~
+
+CharacterState provides immutable runtime constants and a derived string-union type. Avatar, MotionController and every RenderFrame use that type; setState rejects unknown values at runtime. Existing string values remain valid. Connection and audio lifecycle states belong to their adapters; the Studio explicitly maps VoiceSessionState to CharacterState instead of passing transport states into renderers. Choosing a character state does not itself start audio or a network operation.
+
 Mouth states are defined once in the core and exported as both runtime constants and a string-union type. Classification, character validation, renderer capabilities, morph mapping and Studio controls all use this definition:
 
 ~~~ts
@@ -112,7 +124,13 @@ Do not push an entire recording at once: the avatar renders the most recent fram
 
 ## Custom characters and asset hosting
 
-Pass the URL of a V1 `character.json`, with images stored beside it, or a validated `CharacterDefinition` containing image URLs. A relative image path in a JSON file resolves relative to that JSON URL. Paths in an object resolve against the document base URI.
+Creation accepts signal (AbortSignal) and onError. Aborting before creation resolves releases renderer resources and rejects promptly; after successful creation, call destroy() for teardown. Rendering failures stop the animation loop and notify onError. After repairing a recoverable backend failure, start() can restart it. Renderer factories receive an optional RendererContext for asynchronous errors such as WebGL context loss. Errors in consumer callbacks cannot prevent owned resource teardown; destroy() reports cleanup callback errors after releasing resources.
+
+SpriteCharacterDefinition, SpritePlacement and parseSpriteCharacterDefinition are Canvas-specific exports from @hh1st/hoho-avatar/canvas. They replace the former CharacterDefinition/parseCharacterDefinition names in the renderer-neutral core.
+
+AudioFeatures uses estimatedFrequencyHz (derived from zero crossings) and roundnessScore (a 0..1 heuristic). These replace the misleading spectralCentroid and lowBandRatio names; the calculation does not measure a spectrum.
+
+Pass the URL of a V1 `character.json`, with images stored beside it, or a validated `SpriteCharacterDefinition` containing image URLs. A relative image path in a JSON file resolves relative to that JSON URL. Paths in an object resolve against the document base URI.
 
 The bundled robot entry contains asset URLs relative to its ESM module. Vite production builds copy those assets automatically. The SDK worklet is a separate `audio-clip-processor.js` file, not an inline blob; retain the complete `dist-sdk/` directory, including shared JavaScript chunks, if serving the package directly. Native browser ESM and Vite builds on a nested base path are covered by the package consumer test. Other bundlers should preserve `new URL(..., import.meta.url)` asset references.
 

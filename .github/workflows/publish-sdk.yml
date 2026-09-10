@@ -25,6 +25,7 @@ jobs:
       - name: Match tag to package version
         run: node --input-type=module -e "import fs from 'node:fs'; if (process.env.GITHUB_REF_NAME !== 'v' + JSON.parse(fs.readFileSync('package.json')).version) process.exit(1)"
       - run: npm run typecheck
+      - run: npm run lint
       - run: npm test
       - run: npm run build
       - run: npx playwright install --with-deps chromium

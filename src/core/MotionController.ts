@@ -1,7 +1,8 @@
 import { BlinkController } from '../animation/BlinkController';
 import { MouthClassifier } from '../audio/MouthClassifier';
 import { PCMAnalyzer } from '../audio/PCMAnalyzer';
-import type { CharacterState, MotionFrame } from './types';
+import type { MotionFrame } from './types';
+import { CharacterState, isCharacterState } from './CharacterState';
 import { MouthState, isMouthState } from './MouthState';
 import type { AvatarRenderer, RendererCapabilities } from './renderer';
 
@@ -16,11 +17,11 @@ export class MotionController {
   private running = false;
   private destroyed = false;
   private lastTime = 0;
-  private state: CharacterState = 'idle';
+  private state: CharacterState = CharacterState.Idle;
   private mouthOverride?: MouthState;
   private blinkOverride = false;
   private motion: MotionFrame = { timestamp: 0, speaking: false, energy: 0, mouth: MouthState.Closed };
-  constructor(private readonly backend: AvatarRenderer, sampleRate = 48_000) {
+  constructor(private readonly backend: AvatarRenderer, sampleRate = 48_000, private readonly onError?: (error: Error) => void) {
     this.validateRate(sampleRate); this.analyzer = new PCMAnalyzer({ sampleRate });
     this.ready = backend.ready.then(() => this.assertActive()).catch((error) => { this.destroy(); throw error; });
   }
@@ -49,7 +50,11 @@ export class MotionController {
     this.assertActive(); this.analyzer.reset(); this.motion = this.classifier.reset();
     this.mouthOverride = undefined; this.backend.reset(); this.emit();
   }
-  setState(state: CharacterState): void { this.assertActive(); this.state = state; }
+  setState(state: CharacterState): void {
+    this.assertActive();
+    if (!isCharacterState(state)) throw new Error('Unknown character state');
+    this.state = state;
+  }
   previewMouth(mouth?: MouthState): void {
     this.assertActive();
     if (mouth !== undefined && !isMouthState(mouth)) throw new Error('Unknown mouth state');
@@ -63,8 +68,13 @@ export class MotionController {
       if (!this.running || this.destroyed) return;
       this.animationFrame = undefined;
       const motion = this.mouthOverride ? { ...this.motion, mouth: this.mouthOverride } : this.motion;
-      this.backend.render({ motion, eyesClosed: this.blinkOverride || this.blink.isClosed(now), state: this.state,
-        timestamp: now, deltaSeconds: Math.max(0, Math.min(0.1, (now - this.lastTime) / 1000)) });
+      try {
+        this.backend.render({ motion, eyesClosed: this.blinkOverride || this.blink.isClosed(now), state: this.state,
+          timestamp: now, deltaSeconds: Math.max(0, Math.min(0.1, (now - this.lastTime) / 1000)) });
+      } catch (error) {
+        this.reportError(error);
+        return;
+      }
       this.lastTime = now;
       if (this.running && !this.destroyed) this.animationFrame = requestAnimationFrame(draw);
     };
@@ -74,6 +84,16 @@ export class MotionController {
     this.running = false;
     if (this.animationFrame !== undefined) cancelAnimationFrame(this.animationFrame);
     this.animationFrame = undefined;
+  }
+  reportError(value: unknown): void {
+    this.stop();
+    const error = value instanceof Error ? value : new Error(String(value));
+    try {
+      if (this.onError) this.onError(error);
+      else console.error(error);
+    } catch (callbackError) {
+      console.error(callbackError);
+    }
   }
   destroy(): void {
     if (this.destroyed) return;

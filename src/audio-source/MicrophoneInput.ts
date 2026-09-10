@@ -1,10 +1,9 @@
-import processorUrl from "./audio-clip-processor.ts?worker&url";
+import { AudioRuntime } from "./AudioRuntime";
 
 /** Owns one microphone capture, including permission requests that finish after cancellation. */
 export class MicrophoneInput {
-  private readonly context = new AudioContext();
-  private readonly lifetime = new AbortController();
-  private workletReady?: Promise<void>;
+  private readonly runtime = new AudioRuntime();
+  private readonly context = this.runtime.context;
   private stream?: MediaStream;
   private source?: MediaStreamAudioSourceNode;
   private processor?: AudioWorkletNode;
@@ -19,7 +18,7 @@ export class MicrophoneInput {
   async prepare(): Promise<void> {
     this.assertActive();
     try {
-      await this.waitForSetup(Promise.all([this.context.resume(), this.loadWorklet()]));
+      await this.runtime.prepare();
       if (this.closed) throw new DOMException("Microphone setup cancelled", "AbortError");
     } catch (error) {
       await this.destroy();
@@ -45,13 +44,13 @@ export class MicrophoneInput {
         abort = () => reject(new DOMException("Microphone request cancelled", "AbortError"));
         signal.addEventListener("abort", abort, { once: true });
       });
-      const stream = await this.waitForSetup(Promise.race([pending, aborted]));
+      const stream = await this.runtime.wait(Promise.race([pending, aborted]));
       if (signal.aborted || this.closed) {
         stream.getTracks().forEach((track) => track.stop());
         throw new DOMException("Microphone request cancelled", "AbortError");
       }
       this.stream = stream;
-      await this.waitForSetup(Promise.race([this.loadWorklet(), aborted]));
+      await this.runtime.wait(Promise.race([this.runtime.loadWorklet(), aborted]));
       if (signal.aborted || this.closed) {
         throw new DOMException("Microphone setup cancelled", "AbortError");
       }
@@ -83,7 +82,7 @@ export class MicrophoneInput {
 
   destroy(): Promise<void> {
     if (this.closed) return this.closed;
-    this.lifetime.abort();
+
     if (this.processor) {
       this.processor.port.onmessage = null;
       this.processor.port.close();
@@ -93,28 +92,8 @@ export class MicrophoneInput {
     this.sink?.disconnect();
     this.stream?.getTracks().forEach((track) => track.stop());
     this.stream = undefined;
-    this.closed = this.context.close();
+    this.closed = this.runtime.destroy();
     return this.closed;
-  }
-
-  private loadWorklet(): Promise<void> {
-    return this.workletReady ??= this.context.audioWorklet.addModule(processorUrl);
-  }
-
-  /** Closing an AudioContext need not settle an outstanding module download. */
-  private async waitForSetup<T>(operation: Promise<T>): Promise<T> {
-    const signal = this.lifetime.signal;
-    let cancel!: () => void;
-    const cancelled = new Promise<never>((_, reject) => {
-      cancel = () => reject(new DOMException("Microphone setup cancelled", "AbortError"));
-      if (signal.aborted) cancel();
-      else signal.addEventListener("abort", cancel, { once: true });
-    });
-    try {
-      return await Promise.race([operation, cancelled]);
-    } finally {
-      signal.removeEventListener("abort", cancel);
-    }
   }
 
   private assertActive(): void {

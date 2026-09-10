@@ -4,12 +4,16 @@ import { MicrophoneInput } from "../audio-source/MicrophoneInput";
 import { MotionController } from "./MotionController";
 import type { RendererFactory, RendererCapabilities } from "./renderer";
 import type { CharacterState, MotionFrame, MouthState } from "./types";
+import { waitFor } from '../internal/abort';
 
 export interface AvatarOptions {
   renderer: RendererFactory;
   /** Rate of externally supplied mono PCM. Default: 48 kHz. */
   sampleRate?: number;
   onMotion?: (frame: MotionFrame) => void;
+  onError?: (error: Error) => void;
+  /** Cancels asset loading before creation completes; does not own the ready avatar. */
+  signal?: AbortSignal;
 }
 
 /** A ready-to-use avatar with owned audio capture and playback. */
@@ -19,6 +23,7 @@ export class Avatar {
   private operation?: AbortController;
   private destroyed = false;
   private closing: Promise<void> = Promise.resolve();
+  private destruction?: Promise<void>;
 
   constructor(private readonly controller: MotionController) {}
 
@@ -67,7 +72,7 @@ export class Avatar {
       });
       this.player = player;
       // Resume before fetch/decode so browser user activation is retained.
-      await player.prepare();
+      await waitFor(player.prepare(), operation.signal);
       operation.signal.throwIfAborted();
       let encoded: Blob | ArrayBuffer;
       if (typeof input === "string") {
@@ -76,10 +81,10 @@ export class Avatar {
         encoded = await response.arrayBuffer();
       } else encoded = input;
       operation.signal.throwIfAborted();
-      const metadata = await player.load(encoded);
+      const metadata = await waitFor(player.load(encoded), operation.signal);
       operation.signal.throwIfAborted();
       this.controller.setSampleRate(metadata.sampleRate);
-      await player.play();
+      await waitFor(player.play(), operation.signal);
       operation.signal.throwIfAborted();
       return metadata;
     } catch (error) {
@@ -120,17 +125,28 @@ export class Avatar {
     const microphone = this.microphone;
     this.player = undefined;
     this.microphone = undefined;
+    // Take ownership of cleanup before invoking any renderer or consumer callback.
+    const close = (resource?: { destroy(): Promise<void> }) => {
+      try { return resource?.destroy(); } catch (error) { return Promise.reject(error); }
+    };
+    this.closing = Promise.allSettled([this.closing, close(player), close(microphone)]).then(() => undefined);
     this.controller.resetAudio();
-    this.closing = Promise.allSettled([this.closing, player?.destroy(), microphone?.destroy()]).then(() => undefined);
   }
 
-  async destroy(): Promise<void> {
-    if (!this.destroyed) {
-      this.stopAudio();
-      this.destroyed = true;
-      this.controller.destroy();
-    }
-    await this.closing;
+  destroy(): Promise<void> {
+    if (this.destruction) return this.destruction;
+    let resolve!: () => void;
+    let reject!: (error: unknown) => void;
+    this.destruction = new Promise<void>((yes, no) => { resolve = yes; reject = no; });
+    const errors: unknown[] = [];
+    try { this.stopAudio(); } catch (error) { errors.push(error); }
+    this.destroyed = true;
+    try { this.controller.destroy(); } catch (error) { errors.push(error); }
+    void this.closing.then(() => {
+      if (errors.length) reject(new AggregateError(errors, 'Avatar cleanup callbacks failed'));
+      else resolve();
+    }, reject);
+    return this.destruction;
   }
 
   private assertActive(): void {
@@ -140,17 +156,21 @@ export class Avatar {
 
 /** Identical creation and lifecycle for every renderer implementation. */
 export async function createAvatar(canvas: HTMLCanvasElement, options: AvatarOptions): Promise<Avatar> {
+  options.signal?.throwIfAborted();
   const rate = options.sampleRate ?? 48_000;
   if (!Number.isFinite(rate) || rate <= 0) throw new Error('sampleRate must be a positive finite number');
-  const controller = new MotionController(options.renderer(canvas), rate);
+  let controller: MotionController | undefined;
+  const renderer = options.renderer(canvas, { onError: (error) => controller?.reportError(error) });
+  controller = new MotionController(renderer, rate, options.onError);
   const avatar = new Avatar(controller);
   try {
-    await avatar.ready;
+    await waitFor(avatar.ready, options.signal);
+    options.signal?.throwIfAborted();
     if (options.onMotion) avatar.onMotion(options.onMotion);
     avatar.start();
     return avatar;
   } catch (error) {
-    controller.destroy();
+    try { controller.destroy(); } catch { /* Preserve the startup error; resources were released. */ }
     throw error;
   }
 }

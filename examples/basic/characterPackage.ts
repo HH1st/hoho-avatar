@@ -1,6 +1,8 @@
 import { strFromU8, unzipSync, Unzip, UnzipInflate } from "fflate";
-import { parseCharacterDefinition, MOUTH_STATES } from "../../src";
-import type { CharacterDefinition, MouthState } from "../../src";
+import { MOUTH_STATES } from "../../src";
+import { parseSpriteCharacterDefinition } from "../../src/canvas";
+import type { SpriteCharacterDefinition } from "../../src/canvas";
+import type { MouthState } from "../../src";
 
 const MAX_ZIP_BYTES = 25 * 1024 * 1024;
 const MAX_EXTRACTED_BYTES = 75 * 1024 * 1024;
@@ -21,8 +23,8 @@ interface ObjectUrlApi {
   revoke(url: string): void;
 }
 
-export interface LoadedCharacterPackage {
-  definition: CharacterDefinition;
+export interface LoadedSpriteCharacterPackage {
+  definition: SpriteCharacterDefinition;
   name: string;
   dispose(): void;
 }
@@ -131,7 +133,7 @@ async function extractCharacterFiles(bytes: Uint8Array): Promise<Map<string, Uin
   return files;
 }
 
-export async function loadCharacterPackage(file: PackageFile, objectUrls: ObjectUrlApi = browserObjectUrls): Promise<LoadedCharacterPackage> {
+export async function loadSpriteCharacterPackage(file: PackageFile, objectUrls: ObjectUrlApi = browserObjectUrls): Promise<LoadedSpriteCharacterPackage> {
   if (!file.name.toLowerCase().endsWith(".zip")) throw new Error("Choose a .zip character package.");
   if (file.size > MAX_ZIP_BYTES) throw new Error("Character ZIP is larger than 25 MB.");
 
@@ -143,9 +145,9 @@ export async function loadCharacterPackage(file: PackageFile, objectUrls: Object
   if (configs.length !== 1) throw new Error(configs.length ? "The ZIP contains more than one character.json." : "The ZIP does not contain character.json.");
   const configPath = configs[0]!;
 
-  let definition: CharacterDefinition;
+  let definition: SpriteCharacterDefinition;
   try {
-    definition = parseCharacterDefinition(JSON.parse(strFromU8(files.get(configPath)!)) as unknown);
+    definition = parseSpriteCharacterDefinition(JSON.parse(strFromU8(files.get(configPath)!)) as unknown);
   } catch (error) {
     if (error instanceof SyntaxError) throw new Error("character.json is not valid JSON.");
     throw error;
@@ -162,7 +164,7 @@ export async function loadCharacterPackage(file: PackageFile, objectUrls: Object
   };
 
   try {
-    const loadedDefinition: CharacterDefinition = {
+    const loadedDefinition: SpriteCharacterDefinition = {
       ...definition,
       body: { ...definition.body, src: createAssetUrl(definition.body.src) },
       mouth: {

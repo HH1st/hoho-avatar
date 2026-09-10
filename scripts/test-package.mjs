@@ -31,9 +31,11 @@ const sdkMap = JSON.parse(await readFile('dist-sdk/index.js.map', 'utf8'));
 assert.ok(sdkMap.sources.length > 0 && sdkMap.mappings.length > 0, 'SDK source map must be usable');
 await mkdir('tmp', { recursive: true });
 const fixture = await mkdtemp(join(root, 'tmp', 'sdk-consumer-'));
-await cp('examples/sdk-quickstart', fixture, { recursive: true });
-await writeFile(join(fixture, 'package.json'), JSON.stringify({ name: 'sdk-consumer-test', private: true, type: 'module' }));
-run([npm, 'install', '--ignore-scripts', '--no-audit', '--no-fund', '--registry=https://registry.npmjs.org', '--cache', join(root, 'npm-cache'), resolve(packed.filename)], fixture);
+await cp('examples/sdk-quickstart', fixture, { recursive: true, filter: (source) => !/(?:node_modules|dist|plain|package-lock\.json|\.tgz)(?:[\\/]|$)/.test(source) });
+const consumerManifest = JSON.parse(await readFile(join(fixture, 'package.json'), 'utf8'));
+assert.equal(consumerManifest.dependencies['@hh1st/hoho-avatar'], 'file:./hoho-avatar-sdk.tgz');
+await cp(packed.filename, join(fixture, 'hoho-avatar-sdk.tgz'));
+run([npm, 'install', '--ignore-scripts', '--no-audit', '--no-fund', '--registry=https://registry.npmjs.org', '--cache', join(root, 'npm-cache')], fixture);
 assert.ok(!(await readFile(join(fixture, 'package-lock.json'), 'utf8')).includes('kitten-tts'));
 assert.ok(!(await readFile(join(fixture, 'package-lock.json'), 'utf8')).includes('node_modules/three'), '2D consumers must not install the optional Three.js peer');
 const coreTypes = await readFile('dist-sdk/types/core/Avatar.d.ts', 'utf8');
@@ -42,6 +44,7 @@ assert.ok(!/TalkingSprite|TalkingModel|three\/|canvas\//.test(coreTypes), 'Avata
 run([join(root, 'node_modules/typescript/bin/tsc'), '-p', 'tsconfig.json'], fixture);
 run(['--input-type=module', '-e', 'const sdk = await import("@hh1st/hoho-avatar"); if (typeof sdk.createAvatar !== "function") throw Error("Missing SDK API");'], fixture);
 run(['--input-type=module', '-e', 'const { MouthState, MOUTH_STATES, isMouthState } = await import("@hh1st/hoho-avatar"); if (MouthState.Round !== "round" || MOUTH_STATES.length !== 5 || !isMouthState("round") || isMouthState("mouth_round")) throw Error("Invalid mouth vocabulary");'], fixture);
+run(['--input-type=module', '-e', 'const { CharacterState, CHARACTER_STATES, isCharacterState } = await import("@hh1st/hoho-avatar"); if (CharacterState.Thinking !== "thinking" || CHARACTER_STATES.length !== 4 || !isCharacterState("speaking") || isCharacterState("connecting")) throw Error("Invalid character vocabulary");'], fixture);
 await mkdir(join(fixture, 'public'), { recursive: true });
 await cp('public/audio/sample-voice.wav', join(fixture, 'public/sample.wav'));
 

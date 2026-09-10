@@ -11,7 +11,7 @@ class FakeSource {
 }
 
 class FakeWorkletNode {
-  readonly port = { close: vi.fn(), onmessage: null };
+  readonly port = { close: vi.fn(), postMessage: vi.fn(), onmessage: null };
   readonly connect = vi.fn();
   readonly disconnect = vi.fn();
 }
@@ -67,5 +67,21 @@ describe("AudioQueuePlayer", () => {
     expect(onPlaybackStart).toHaveBeenCalledOnce();
     await player.destroy();
   });
-});
 
+  it('rejects a pending append immediately on stop and does not strand a fresh append', async () => {
+    const player = new AudioQueuePlayer({ onPCM: vi.fn() });
+    const decode = vi.spyOn(context, 'decodeAudioData');
+    let release!: (buffer: AudioBuffer) => void;
+    decode.mockReturnValueOnce(new Promise((resolve) => { release = resolve; }));
+    const old = player.append(new Uint8Array([1]).buffer);
+    const rejected = expect(old).rejects.toMatchObject({ name: 'AbortError' });
+    await vi.waitFor(() => expect(decode).toHaveBeenCalledOnce());
+    player.stop(); await rejected;
+    await player.append(new Uint8Array([2]).buffer);
+    expect(context.sources).toHaveLength(1);
+    release({ duration: 1, sampleRate: 48_000, numberOfChannels: 1 } as AudioBuffer);
+    await Promise.resolve();
+    expect(context.sources).toHaveLength(1);
+    await player.destroy();
+  });
+});

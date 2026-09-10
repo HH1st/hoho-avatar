@@ -1,6 +1,6 @@
 import { strToU8, unzipSync, zipSync, Zip, ZipDeflate } from "fflate";
 import { describe, expect, it } from "vitest";
-import { loadCharacterPackage } from "../examples/basic/characterPackage";
+import { loadSpriteCharacterPackage } from "../examples/basic/characterPackage";
 
 const definition = {
   version: 1,
@@ -67,11 +67,11 @@ function streamedArchive(files: Record<string, Uint8Array>, repeat = 1) {
   return bytes;
 }
 
-describe("loadCharacterPackage", () => {
+describe("loadSpriteCharacterPackage", () => {
   it("resolves referenced images to disposable object URLs", async () => {
     const revoked: string[] = [];
     let nextUrl = 0;
-    const loaded = await loadCharacterPackage(packageFile(), {
+    const loaded = await loadSpriteCharacterPackage(packageFile(), {
       create: () => `blob:test-${++nextUrl}`,
       revoke: (url) => revoked.push(url),
     });
@@ -86,17 +86,17 @@ describe("loadCharacterPackage", () => {
   it("rejects a package with a missing referenced asset", async () => {
     const files = packageFile();
     const bytes = await unzipAndRemove(files, "avatar/mouth-wide.png");
-    await expect(loadCharacterPackage(bytes, { create: () => "blob:test", revoke: () => undefined })).rejects.toThrow("Missing referenced asset: mouth-wide.png");
+    await expect(loadSpriteCharacterPackage(bytes, { create: () => "blob:test", revoke: () => undefined })).rejects.toThrow("Missing referenced asset: mouth-wide.png");
   });
 
   it("rejects packages without character.json", async () => {
     const bytes = zipSync({ "avatar/body.png": new Uint8Array([1]) });
-    await expect(loadCharacterPackage({ name: "avatar.zip", size: bytes.byteLength, arrayBuffer: async () => bytes.slice().buffer })).rejects.toThrow("does not contain character.json");
+    await expect(loadSpriteCharacterPackage({ name: "avatar.zip", size: bytes.byteLength, arrayBuffer: async () => bytes.slice().buffer })).rejects.toThrow("does not contain character.json");
   });
 
   it("accepts streamed archives whose local headers omit original sizes", async () => {
     const files = unzipSync(new Uint8Array(await packageFile().arrayBuffer()));
-    const loaded = await loadCharacterPackage(archiveFile(streamedArchive(files)), { create: () => "blob:test", revoke: () => undefined });
+    const loaded = await loadSpriteCharacterPackage(archiveFile(streamedArchive(files)), { create: () => "blob:test", revoke: () => undefined });
     expect(loaded.name).toBe("avatar");
     loaded.dispose();
   });
@@ -107,7 +107,7 @@ describe("loadCharacterPackage", () => {
     files["__MACOSX/ignored"] = new Uint8Array(1);
     files["avatar/.DS_Store"] = new Uint8Array(1);
     const bytes = zipSync(files, { level: 0 });
-    const loaded = await loadCharacterPackage(archiveFile(bytes), { create: () => "blob:test", revoke: () => undefined });
+    const loaded = await loadSpriteCharacterPackage(archiveFile(bytes), { create: () => "blob:test", revoke: () => undefined });
     expect(loaded.name).toBe("avatar");
     loaded.dispose();
   });
@@ -120,37 +120,37 @@ describe("loadCharacterPackage", () => {
     for (let offset = 0; offset + 4 <= bytes.length; offset += 1) {
       if (view.getUint32(offset, true) === 0x02014b50) view.setUint16(offset + 10, 99, true);
     }
-    await expect(loadCharacterPackage(archiveFile(bytes))).rejects.toThrow("75 MB");
+    await expect(loadSpriteCharacterPackage(archiveFile(bytes))).rejects.toThrow("75 MB");
   });
 
   it("enforces the declared size limit across multiple entries", async () => {
     const bytes = setDeclaredSize(zipSync({ "a.png": new Uint8Array(1), "b.png": new Uint8Array(1) }), 40 * 1024 * 1024);
-    await expect(loadCharacterPackage(archiveFile(bytes))).rejects.toThrow("75 MB");
+    await expect(loadSpriteCharacterPackage(archiveFile(bytes))).rejects.toThrow("75 MB");
   });
 
   it("limits actual streamed output even when archive size metadata is understated", async () => {
     const bytes = setDeclaredSize(streamedArchive({ "large.png": new Uint8Array(1024 * 1024) }, 76), 1);
     expect(bytes.length).toBeLessThan(25 * 1024 * 1024);
-    await expect(loadCharacterPackage(archiveFile(bytes))).rejects.toThrow("75 MB");
+    await expect(loadSpriteCharacterPackage(archiveFile(bytes))).rejects.toThrow("75 MB");
   });
 
   it("rejects duplicate normalized paths instead of silently replacing assets", async () => {
-    await expect(loadCharacterPackage(packageFile({ "avatar/./body.png": new Uint8Array([1]) }))).rejects.toThrow("Duplicate");
+    await expect(loadSpriteCharacterPackage(packageFile({ "avatar/./body.png": new Uint8Array([1]) }))).rejects.toThrow("Duplicate");
   });
 
   it("rejects archives with excessive entry counts", async () => {
     const files = Object.fromEntries(Array.from({ length: 1025 }, (_, index) => [`file-${index}`, new Uint8Array()]));
-    await expect(loadCharacterPackage(archiveFile(zipSync(files)))).rejects.toThrow("too many entries");
+    await expect(loadSpriteCharacterPackage(archiveFile(zipSync(files)))).rejects.toThrow("too many entries");
   });
 
   it("checks the actual compressed buffer size as well as the file metadata", async () => {
     const file = { ...archiveFile(new Uint8Array(25 * 1024 * 1024 + 1)), size: 1 };
-    await expect(loadCharacterPackage(file)).rejects.toThrow("25 MB");
+    await expect(loadSpriteCharacterPackage(file)).rejects.toThrow("25 MB");
   });
 
   it("rejects a truncated archive", async () => {
     const bytes = new Uint8Array(await packageFile().arrayBuffer());
-    await expect(loadCharacterPackage(archiveFile(bytes.subarray(0, bytes.length - 22)))).rejects.toThrow("ZIP could not be opened");
+    await expect(loadSpriteCharacterPackage(archiveFile(bytes.subarray(0, bytes.length - 22)))).rejects.toThrow("ZIP could not be opened");
   });
 });
 

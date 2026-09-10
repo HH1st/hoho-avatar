@@ -226,32 +226,30 @@ export class StreamingTTSPlayer {
       this.playing = false;
       this.options.onError?.(error);
     } finally {
-      if (generation !== this.generation) {
-        this.synthesizing = false;
-        if (this.currentState === "stopping") this.setState("idle");
-      } else {
-        if (this.currentState === "error") {
-          this.synthesizing = false;
-          return;
-        }
-        try {
-          await this.appendReadyAudio(generation, true);
-        } catch (error) {
-          if (generation === this.generation) this.fail(error);
-          this.synthesizing = false;
-          return;
-        }
-        if (generation !== this.generation) return;
-        this.synthesizing = false;
+      await this.completeSynthesis(generation);
+    }
+  }
 
-        // Text can arrive while the final decoded clips are being appended.
-        // Re-enter the worker so those deltas cannot be stranded in the queue.
-        if (this.textQueue.length > 0) {
-          this.startSynthesis();
-        } else if (this.endRequested) {
-          this.audioPlayer.finish();
-        }
+  private async completeSynthesis(generation: number): Promise<void> {
+    try {
+      if (generation === this.generation && this.currentState !== "error") {
+        await this.appendReadyAudio(generation, true);
       }
+    } catch (error) {
+      if (generation === this.generation) this.fail(error);
+    } finally {
+      // Cancellation may happen during the final decode, after synthesis ended.
+      this.synthesizing = false;
+      if (generation !== this.generation && this.currentState === "stopping") this.setState("idle");
+    }
+    if (generation !== this.generation || this.currentState === "error") return;
+
+    // Text can arrive while the final decoded clips are being appended.
+    // Re-enter the worker so those deltas cannot be stranded in the queue.
+    if (this.textQueue.length > 0) {
+      this.startSynthesis();
+    } else if (this.endRequested) {
+      this.audioPlayer.finish();
     }
   }
 

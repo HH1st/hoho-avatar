@@ -60,7 +60,7 @@ npm run dev
 
 Open the URL shown by Vite and press **Try a sample**. Everything runs locally in the browser.
 
-The single Studio in `examples/basic/` imports the checked-out SDK source. Select a 2D character or **Mochi (3D)** in the same character library; microphone, files, TTS and voice conversations share the same controls. Three.js is loaded only when selecting a 3D character. GitHub Pages builds this same Studio. The SDK quickstart remains an isolated package-consumer fixture.
+The single Studio in `examples/basic/` imports the checked-out SDK source. Select a 2D character or **Mochi (3D)** in the same character library; microphone, files, TTS and voice conversations share the same controls. Three.js is loaded only when selecting a 3D character. GitHub Pages builds this same Studio. Run `npm run setup:quickstart` to build and install the current tarball in the isolated quickstart.
 
 ## Built for voice agents
 
@@ -208,7 +208,7 @@ The package entry point exports:
 - `AudioQueuePlayer`
 - `StreamingTTSPlayer` and `takeTTSChunks`
 - `VuiClient` and `StreamingPCMPlayer`
-- `parseCharacterDefinition` for validating untrusted character JSON
+- `parseSpriteCharacterDefinition` from `/canvas` for validating sprite JSON
 - TypeScript definitions for character configuration, audio features, mouth states, and motion frames
 
 ## Character asset format
@@ -303,6 +303,7 @@ Image generation also requires an ImageGen capability when a character body does
 npm run setup:demo # Install the demo dependencies from its lockfile
 npm run dev        # Start the unified 2D/3D Studio from source
 npm run typecheck  # Type-check source, examples, and tests
+npm run lint       # Check JS/TS correctness with Oxlint
 npm test           # Run deterministic engine and audio-player tests
 npm run build      # Build the demo into examples/basic/dist
 npm run build:sdk  # Build SDK ESM, declarations and assets
@@ -326,7 +327,8 @@ src/
 ├── audio/       # PCM feature extraction and mouth classification
 ├── audio-source/ # Local-file playback and AudioWorklet PCM output
 ├── core/        # Avatar API, renderer contracts and shared motion
-└── renderer/    # Asset loading and Canvas composition
+├── canvas/      # Sprite format, assets and painting
+└── three/       # GLB loading and morph rendering
 
 examples/basic/  # Browser microphone demo
 public/characters/
@@ -360,7 +362,7 @@ microphone / audio file / TTS
                                BlinkController
 ```
 
-`audio-source/` owns browser playback and emits PCM without depending on avatar rendering. `audio/` is DOM-independent signal processing. `core/` defines the public orchestration and validated character model, while `renderer/` owns Canvas and image loading. Keep new integrations on these boundaries: audio providers should emit PCM, classifiers should emit `MotionFrame`, and renderers should consume motion rather than control playback.
+`audio-source/` owns browser playback and emits PCM without depending on avatar rendering. `audio/` is DOM-independent signal processing. `core/` defines renderer-neutral orchestration. `canvas/` owns the sprite format, validation, image loading and painting; `three/` owns GLB rendering. Keep new integrations on these boundaries: audio providers should emit PCM, classifiers should emit `MotionFrame`, and renderers should consume motion rather than control playback.
 
 ## Privacy and browser support
 

@@ -1,7 +1,7 @@
 import { readFileSync, readdirSync } from "node:fs";
 import { zipSync } from "fflate";
 import { describe, expect, it } from "vitest";
-import { loadCharacterPackage } from "../examples/basic/characterPackage";
+import { loadSpriteCharacterPackage } from "../examples/basic/characterPackage";
 
 describe("bundled character ZIP import", () => {
   it.each(["niu-lai", "pixel-bot", "pixel-portrait"])("preserves %s image bytes", async (name) => {
@@ -12,7 +12,7 @@ describe("bundled character ZIP import", () => {
     const bytes = zipSync(files);
     const blobs = [];
     const revoked = [];
-    const loaded = await loadCharacterPackage({
+    const loaded = await loadSpriteCharacterPackage({
       name: `${name}.zip`,
       size: bytes.byteLength,
       arrayBuffer: async () => bytes.slice().buffer,
