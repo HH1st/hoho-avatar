@@ -50,6 +50,10 @@ const voiceAgentTab = providerTabs.find((tab) => tab.dataset.provider === "agent
 const configuredVoiceAgentUrl = import.meta.env.VITE_VOICE_AGENT_URL?.trim();
 const localVoiceAgentAvailable = import.meta.env.DEV;
 const voiceAgentAvailable = localVoiceAgentAvailable || Boolean(configuredVoiceAgentUrl);
+const hasLocalLive2D = import.meta.env.DEV && import.meta.env.HOHO_LIVE2D_SAMPLE === true;
+const live2dModelUrl = import.meta.env.VITE_LIVE2D_MODEL_URL?.trim() || (hasLocalLive2D ? '/__live2d/Wanko/Wanko.model3.json' : '');
+const live2dCoreUrl = import.meta.env.VITE_LIVE2D_CORE_URL?.trim() || (hasLocalLive2D ? '/__live2d/live2dcubismcore.min.js' : '');
+const live2dName = import.meta.env.VITE_LIVE2D_NAME?.trim() || (hasLocalLive2D ? 'Wankoromochi' : 'Live2D');
 
 const barElements = Array.from({ length: 32 }, () => {
   const bar = document.createElement("i");
@@ -80,7 +84,10 @@ const avatars = {
   },
 } as const;
 
-function selectedAvatar(): { character?: string | SpriteCharacterDefinition; model?: string | ArrayBuffer; label: string; defaultText: string } {
+function selectedAvatar(): { character?: string | SpriteCharacterDefinition; model?: string | ArrayBuffer; live2d?: string; label: string; defaultText: string } {
+  if (avatarSelect.value === 'live2d' && live2dModelUrl) {
+    return { live2d: live2dModelUrl, label: live2dName, defaultText: "Hello! It's nice to meet you." };
+  }
   if (avatarSelect.value === 'mochi' || (avatarSelect.value === 'custom-model' && customModel)) {
     const imported = avatarSelect.value === 'custom-model' ? customModel : undefined;
     return { model: imported?.bytes ?? import.meta.env.BASE_URL + 'models/mochi/mochi.glb',
@@ -110,6 +117,7 @@ function syncCharacterChoices() {
     choice.classList.toggle("selected", selected);
     choice.setAttribute("aria-pressed", String(selected));
     choice.disabled = avatarSelect.disabled;
+    if (choice.dataset.avatar === 'live2d' && !live2dModelUrl) choice.hidden = true;
   }
 }
 
@@ -146,7 +154,7 @@ function showAvatar(next: Avatar) {
   stageWrap.dataset.loaded = 'true';
   document.querySelector<HTMLElement>('#modelTools')!.hidden = false;
   document.querySelector<HTMLElement>('#viewHint')!.textContent = next.capabilities.viewControl
-    ? 'Drag to orbit, scroll to zoom' : 'Preview expressions';
+    ? (avatarSelect.value === 'live2d' ? 'Scroll to zoom' : 'Drag to orbit, scroll to zoom') : 'Preview expressions';
   document.querySelector<HTMLElement>('#resetView')!.hidden = !next.capabilities.viewControl;
   for (const { state, button } of mouthButtons) {
     button.disabled = !next.capabilities.mouth.includes(state);
@@ -163,14 +171,17 @@ function showAvatar(next: Avatar) {
 const stage = new CharacterStage(canvas, showAvatar, (error) => { uploadStatus.textContent = error.message; });
 async function mountSelectedAvatar(sampleRate: number, state: CharacterState, signal: AbortSignal = providerAbort.signal) {
   const selected = selectedAvatar();
-  const key = selected.model ?? selected.character;
+  const key = selected.live2d ?? selected.model ?? selected.character;
   stageLabel.textContent = selected.label;
   stageWrap.dataset.character = avatarSelect.value;
-  stageWrap.dataset.renderer = selected.model ? '3d' : '2d';
+  stageWrap.dataset.renderer = selected.live2d ? 'live2d' : selected.model ? '3d' : '2d';
+  document.querySelector<HTMLElement>('#live2dCredit')!.hidden = !selected.live2d || !hasLocalLive2D || Boolean(import.meta.env.VITE_LIVE2D_MODEL_URL);
   syncCharacterChoices();
-  const ready = stage.ensure(key, async () => selected.model
-    ? (await import('../../src/three')).threeRenderer({ model: selected.model, background: null })
-    : canvasRenderer({ character: selected.character! }), sampleRate, state, signal);
+  const ready = stage.ensure(key, async () => {
+    if (selected.live2d) return (await import('../../src/live2d')).live2dRenderer({ model: selected.live2d, coreUrl: live2dCoreUrl || undefined });
+    if (selected.model) return (await import('../../src/three')).threeRenderer({ model: selected.model, background: null });
+    return canvasRenderer({ character: selected.character! });
+  }, sampleRate, state, signal);
   if (stage.isLoading) stageWrap.dataset.loaded = 'false';
   await ready;
 }
@@ -435,6 +446,10 @@ document.querySelector('#blinkPreview')!.addEventListener('click', () => {
 });
 
 if (new URLSearchParams(location.search).get('character') === 'mochi') avatarSelect.value = 'mochi';
+const live2dButton = document.querySelector<HTMLButtonElement>('[data-avatar="live2d"]')!;
+live2dButton.hidden = !live2dModelUrl;
+document.querySelector('#live2dName')!.textContent = live2dName;
+if (live2dModelUrl && new URLSearchParams(location.search).get('character') === 'live2d') avatarSelect.value = 'live2d';
 
 mountSelectedAvatar(48000, CharacterState.Idle).catch(reportError);
 updateVoiceAgentControls();

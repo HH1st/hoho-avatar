@@ -28,9 +28,9 @@ export default defineConfig({
     target: "es2022",
     sourcemap: true,
     minify: false,
-    rolldownOptions: { external: [/^three(?:\/|$)/] },
+    rolldownOptions: { external: [/^three(?:\/|$)/, /^pixi\.js$/, /^pixi-live2d-display(?:\/|$)/, /^@pixi\//] },
     lib: {
-      entry: { index: "src/index.ts", canvas: "src/canvas/index.ts", three: "src/three/index.ts", "audio-clip-processor": "src/audio-source/audio-clip-processor.ts" },
+      entry: { index: "src/index.ts", canvas: "src/canvas/index.ts", three: "src/three/index.ts", live2d: "src/live2d/index.ts", "audio-clip-processor": "src/audio-source/audio-clip-processor.ts" },
       formats: ["es"],
       fileName: (_format, name) => `${name}.js`,
     },

@@ -36,8 +36,10 @@ The repository and `examples/basic/` commit public-registry lockfiles. CI instal
 
 ## Renderer expansion
 
-Status: an initial Three.js adapter and Blender character are implemented in source (unreleased).
+Status: Canvas, Three.js and Live2D adapters are implemented in source (unreleased).
 
 - implemented: one Avatar API with explicit renderer implementations, shared RenderFrame, renderer-independent audio owner, Three.js GLB mouth/blink targets, target capability discovery, and one Studio with 2D/3D character selection;
 - implemented: original Blender source, reproducible export script, GLB and morph validation;
 - remaining: wider renderer adapters, skeletal poses/visemes, VRM, and SDK release and deployment of the unified Studio.
+
+Live2D Cubism 3/4 is implemented through the same AvatarRenderer interface, optional PixiJS/display dependencies and caller-owned Core/model assets. The unified Studio supports configured Live2D characters.

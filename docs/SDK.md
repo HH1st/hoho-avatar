@@ -60,7 +60,9 @@ The included Pixel Bot is original MIT artwork. Other demo characters, TTS model
 
 Since `0.1.0-beta.2`, `MicrophoneInput` uses the shared audio worklet to emit 20 ms mono `Float32Array` packets at the `AudioContext` sample rate. Its output is muted locally. Worklet module loading is part of setup; cancellation and setup failures release acquired tracks and close the context. The PCM callback and network sending still run on the main thread. The Studio now imports local SDK source, so it includes this migration.
 
-## One interface, two implementations
+## One interface, renderer implementations
+
+Live2D is available through live2dRenderer from @hh1st/hoho-avatar/live2d. It implements the same AvatarRenderer contract and CharacterState/MouthState semantics. PixiJS and the display adapter are optional peers; Core and model assets are supplied separately. See [Live2D integration](LIVE2D.md).
 
 Character interaction states follow the same shared-definition pattern as mouth states:
 

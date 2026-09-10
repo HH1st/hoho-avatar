@@ -53,6 +53,22 @@
         }
       ],
       "modifications": "The two text data files match the pinned upstream files byte-for-byte. Native backend build provenance is supplied by the upstream phonemizer distribution."
+    },
+    {
+      "name": "pixi.js",
+      "version": "6.5.10",
+      "license": "MIT",
+      "licenseFile": "licenses/pixi-MIT.txt",
+      "source": "https://github.com/pixijs/pixijs/tree/v6.5.10",
+      "modifications": "Bundled on demand. Official @pixi/unsafe-eval 6.5.10 enables CSP-safe shader uniform handling."
+    },
+    {
+      "name": "pixi-live2d-display",
+      "version": "0.4.0",
+      "license": "MIT for adapter; Live2D Open Software License for embedded Cubism framework",
+      "licenseFile": "licenses/pixi-live2d-display-MIT.txt",
+      "source": "https://github.com/guansss/pixi-live2d-display/tree/v0.4.0",
+      "modifications": "Bundled on demand; autoUpdate/autoInteract disabled. Cubism Core and model fixtures are not distributed."
     }
   ]
 }

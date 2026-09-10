@@ -5,6 +5,7 @@ import { resolve, join, extname, sep } from 'node:path';
 import { createServer } from 'node:http';
 import { chromium } from '@playwright/test';
 import { build } from 'vite';
+import { existsSync } from 'node:fs';
 
 const root = process.cwd();
 const npm = process.env.npm_execpath;
@@ -22,7 +23,7 @@ const lockfile = JSON.parse(await readFile('package-lock.json', 'utf8'));
 assert.equal(manifest.publishConfig.registry, 'https://registry.npmjs.org');
 assert.ok(Object.values(lockfile.packages).every((entry) => !entry.resolved || entry.resolved.startsWith('https://registry.npmjs.org/')), 'Dependencies must resolve from the public npm registry');
 assert.equal(Object.keys(manifest.dependencies || {}).length, 0, 'SDK must not install Azure/TTS/demo dependencies');
-assert.ok(packed.files.every(({ path }) => /^(dist-sdk\/|README\.md$|LICENSE$|package\.json$|docs\/(?:SDK|THREE)\.md$|CHANGELOG\.md$)/.test(path)), 'Unexpected files in package');
+assert.ok(packed.files.every(({ path }) => /^(dist-sdk\/|README\.md$|LICENSE$|package\.json$|docs\/(?:SDK|THREE|LIVE2D)\.md$|CHANGELOG\.md$)/.test(path)), 'Unexpected files in package');
 assert.ok(!packed.files.some(({ path }) => /niu-lai|pixel-portrait|espeak|en_rules|\.env/.test(path)), 'Non-SDK assets in package');
 for (const name of ['dist-sdk/index.js', 'dist-sdk/types/index.d.ts', 'dist-sdk/canvas.js', 'dist-sdk/types/canvas/index.d.ts', 'dist-sdk/three.js', 'dist-sdk/types/three/index.d.ts', 'dist-sdk/audio-clip-processor.js', 'dist-sdk/characters/pixel-bot/body.png']) {
   assert.ok(packed.files.some(({ path }) => path === name), 'Missing package file: ' + name);
@@ -38,11 +39,15 @@ await cp(packed.filename, join(fixture, 'hoho-avatar-sdk.tgz'));
 run([npm, 'install', '--ignore-scripts', '--no-audit', '--no-fund', '--registry=https://registry.npmjs.org', '--cache', join(root, 'npm-cache')], fixture);
 assert.ok(!(await readFile(join(fixture, 'package-lock.json'), 'utf8')).includes('kitten-tts'));
 assert.ok(!(await readFile(join(fixture, 'package-lock.json'), 'utf8')).includes('node_modules/three'), '2D consumers must not install the optional Three.js peer');
+assert.ok(!(await readFile(join(fixture, 'package-lock.json'), 'utf8')).includes('node_modules/pixi'), 'Other renderers must not install Live2D dependencies');
+assert.ok(packed.files.some(({ path }) => path === 'dist-sdk/live2d.js'), 'Missing Live2D entry');
+assert.ok(!packed.files.some(({ path }) => /live2dcubismcore|\.moc3$|Wanko/.test(path)), 'Proprietary runtime/sample must not be bundled');
 const coreTypes = await readFile('dist-sdk/types/core/Avatar.d.ts', 'utf8');
 assert.ok(!/TalkingSprite|TalkingModel|three\/|canvas\//.test(coreTypes), 'Avatar declarations must be renderer-neutral');
 // Compile public declarations under NodeNext without ambient Vite or test types.
 run([join(root, 'node_modules/typescript/bin/tsc'), '-p', 'tsconfig.json'], fixture);
 run(['--input-type=module', '-e', 'const sdk = await import("@hh1st/hoho-avatar"); if (typeof sdk.createAvatar !== "function") throw Error("Missing SDK API");'], fixture);
+run(['--input-type=module', '-e', 'const sdk = await import("@hh1st/hoho-avatar/live2d"); if (typeof sdk.live2dRenderer !== "function") throw Error("Missing Live2D API");'], fixture);
 run(['--input-type=module', '-e', 'const { MouthState, MOUTH_STATES, isMouthState } = await import("@hh1st/hoho-avatar"); if (MouthState.Round !== "round" || MOUTH_STATES.length !== 5 || !isMouthState("round") || isMouthState("mouth_round")) throw Error("Invalid mouth vocabulary");'], fixture);
 run(['--input-type=module', '-e', 'const { CharacterState, CHARACTER_STATES, isCharacterState } = await import("@hh1st/hoho-avatar"); if (CharacterState.Thinking !== "thinking" || CHARACTER_STATES.length !== 4 || !isCharacterState("speaking") || isCharacterState("connecting")) throw Error("Invalid character vocabulary");'], fixture);
 await mkdir(join(fixture, 'public'), { recursive: true });
@@ -64,7 +69,7 @@ const server = createServer(async (request, response) => {
     const path = resolve(fixture, relative || '.');
     if (!path.startsWith(fixture + sep)) { response.writeHead(404).end(); return; }
     const target = (await stat(path)).isDirectory() ? join(path, 'index.html') : path;
-    response.writeHead(200, { 'content-type': mime[extname(target)] || 'application/octet-stream', 'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; media-src 'self'" });
+    response.writeHead(200, { 'content-type': mime[extname(target)] || 'application/octet-stream', 'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' blob:; media-src 'self'" });
     const content = await readFile(target);
     if (content.toString().includes('registerProcessor(')) servedWorklets.push(request.url);
     response.end(content);
@@ -157,6 +162,31 @@ try {
     assert.deepEqual(errors, []);
     await page.close();
     console.log('PASS ' + path + ': optional Three.js entry, Blender GLB, PCM, disposal');
+  }
+  if (existsSync('tmp/live2d-sample/Wanko/Wanko.model3.json')) {
+    run([npm, 'install', '--ignore-scripts', '--no-audit', '--no-fund', '--registry=https://registry.npmjs.org', '--cache', join(root, 'npm-cache'), 'pixi.js@6.5.10', 'pixi-live2d-display@0.4.0', '@pixi/unsafe-eval@6.5.10'], fixture);
+    await cp('tmp/live2d-sample', join(fixture, 'public/live2d'), { recursive: true });
+    await writeFile(join(fixture, 'live2d.html'), '<!doctype html><canvas style="width:400px;height:400px"></canvas><p id="status">Loading</p><button id="destroy">Destroy</button><script type="module" src="./live2d-main.js"></script>');
+    await writeFile(join(fixture, 'live2d-main.js'), [
+      'import { Avatar, createAvatar, MouthState } from "@hh1st/hoho-avatar";',
+      'import { live2dRenderer } from "@hh1st/hoho-avatar/live2d";',
+      'const avatar = await createAvatar(document.querySelector("canvas"), { renderer: live2dRenderer({ model: "./live2d/Wanko/Wanko.model3.json", coreUrl: "./live2d/live2dcubismcore.min.js" }) });',
+      'if (avatar.constructor !== Avatar) throw Error("Not the common Avatar class");',
+      'avatar.previewMouth(MouthState.Large); window.avatar = avatar;',
+      'document.querySelector("#status").textContent = "Ready";',
+      'document.querySelector("#destroy").onclick = async () => { await avatar.destroy(); document.querySelector("#status").textContent = "Destroyed"; };',
+    ].join('\n'));
+    await build({ root: fixture, configFile: false, base: '/nested/', logLevel: 'error', build: { outDir: 'built', emptyOutDir: false, rolldownOptions: { input: join(fixture, 'live2d.html') } } });
+    const page = await browser.newPage();
+    const errors = []; page.on('pageerror', (error) => errors.push(error.message));
+    await page.goto(origin + '/nested/live2d.html');
+    await page.waitForFunction(() => document.querySelector('#status').textContent === 'Ready');
+    assert.equal(await page.evaluate(() => window.avatar.capabilities.mouth.length), 5);
+    await page.click('#destroy');
+    await page.waitForFunction(() => document.querySelector('#status').textContent === 'Destroyed');
+    assert.deepEqual(errors, []);
+    await page.close();
+    console.log('PASS /nested/live2d.html: installed SDK Live2D entry, real Cubism model, disposal');
   }
 } finally {
   await browser?.close();

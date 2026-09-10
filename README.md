@@ -14,7 +14,7 @@ _The redesigned Avatar Studio: a charcoal stage, coral accents, character cards,
 
 The project currently ships a browser-first TypeScript engine that analyzes streaming PCM audio, selects five mouth states, adds automatic blinking, and renders layered PNG characters with Canvas 2D. The demo accepts microphone input, a local audio file, locally generated English speech from KittenTTS, or an optional Azure Realtime voice-agent session. Local audio analysis, file decoding, and KittenTTS stay in the browser; Voice Agent mode explicitly sends microphone audio to the configured Azure OpenAI resource.
 
-An unreleased Three.js renderer and Blender-built 3D character are available in source: run `npm run dev` and select **Mochi (3D)** in the same Studio. See the [3D guide](docs/THREE.md). Live2D and other rendering engines remain roadmap items.
+An unreleased Three.js renderer and Blender-built 3D character are available in source: run `npm run dev` and select **Mochi (3D)** in the same Studio. See the [3D guide](docs/THREE.md). Live2D is also available through the same renderer interface; see [Live2D integration](docs/LIVE2D.md). Other engines remain roadmap items.
 
 ## Use the SDK
 
@@ -385,7 +385,7 @@ Current release:
 
 The current engine is not phoneme-level lip sync, a skeletal animation system, or a general-purpose audio recording library.
 
-The source includes a Three.js adapter consuming shared audio-driven motion, with GLB mouth and blink targets. Richer 2D, Live2D, skeletal retargeting and other renderer integrations remain future work.
+The source includes Three.js and Live2D adapters consuming shared audio-driven motion. Three.js uses GLB morph targets; Live2D uses Cubism parameters. Skeletal retargeting and other renderer integrations remain future work.
 
 SDK packaging and consumer validation are implemented. Preview releases use the public npm `next` tag; see [release instructions](https://github.com/HH1st/hoho-avatar/blob/main/docs/RELEASING.md) and [remaining work](https://github.com/HH1st/hoho-avatar/blob/main/docs/BACKLOG.md).
 

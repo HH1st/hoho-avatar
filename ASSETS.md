@@ -18,7 +18,9 @@ Contributors adding an example character must own the artwork or have explicit r
 
 The 3D Studio uses Three.js under its MIT license, retained at `public/licenses/three-MIT.txt` and copied into its production build. Blender is an authoring tool and is not bundled into the SDK or site.
 
-## KittenTTS phonemizer data
+## Live2D
+
+The optional Live2D renderer uses PixiJS and pixi-live2d-display with MIT notices in public/licenses/. Embedded Cubism framework components have Live2D's separate Open Software License. Proprietary Cubism Core and the optional Wankoromochi development fixture are stored only in ignored tmp/live2d-sample, with official source URLs and license documents. They are not part of public/, production builds or the npm package. See docs/LIVE2D.md for deployment requirements.
 
 `public/espeak-en-dict.tsv` and `public/en_rules` are copied from the
 [`kitten-tts-webgpu` public assets](https://github.com/svenflow/kitten-tts-webgpu/tree/main/public).
