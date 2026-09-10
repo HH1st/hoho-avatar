@@ -1,4 +1,6 @@
-export { TalkingSprite } from "./core/TalkingSprite";
+export { MotionController } from "./core/MotionController";
+export { MouthState, MOUTH_STATES, isMouthState } from "./core/MouthState";
+export type { AvatarRenderer, RendererFactory, RendererCapabilities, RenderFrame } from "./core/renderer";
 export { parseCharacterDefinition } from "./core/CharacterDefinition";
 export { PCMAnalyzer } from "./audio/PCMAnalyzer";
 export { MouthClassifier } from "./audio/MouthClassifier";
@@ -18,7 +20,7 @@ export type {
   TTSSynthesizer,
   TTSSynthesisOptions,
 } from "./audio-source/StreamingTTSPlayer";
-export type { AudioFeatures, CharacterDefinition, CharacterState, MotionFrame, MouthState, SpritePlacement, TalkingSpriteOptions } from "./core/types";
+export type { AudioFeatures, CharacterDefinition, CharacterState, MotionFrame, SpritePlacement } from "./core/types";
 export { Avatar, createAvatar } from "./core/Avatar";
 export type { AvatarOptions } from "./core/Avatar";
 export { MicrophoneInput } from "./audio-source/MicrophoneInput";

@@ -22,9 +22,9 @@ const lockfile = JSON.parse(await readFile('package-lock.json', 'utf8'));
 assert.equal(manifest.publishConfig.registry, 'https://registry.npmjs.org');
 assert.ok(Object.values(lockfile.packages).every((entry) => !entry.resolved || entry.resolved.startsWith('https://registry.npmjs.org/')), 'Dependencies must resolve from the public npm registry');
 assert.equal(Object.keys(manifest.dependencies || {}).length, 0, 'SDK must not install Azure/TTS/demo dependencies');
-assert.ok(packed.files.every(({ path }) => /^(dist-sdk\/|README\.md$|LICENSE$|package\.json$|docs\/SDK\.md$|CHANGELOG\.md$)/.test(path)), 'Unexpected files in package');
+assert.ok(packed.files.every(({ path }) => /^(dist-sdk\/|README\.md$|LICENSE$|package\.json$|docs\/(?:SDK|THREE)\.md$|CHANGELOG\.md$)/.test(path)), 'Unexpected files in package');
 assert.ok(!packed.files.some(({ path }) => /niu-lai|pixel-portrait|espeak|en_rules|\.env/.test(path)), 'Non-SDK assets in package');
-for (const name of ['dist-sdk/index.js', 'dist-sdk/types/index.d.ts', 'dist-sdk/audio-clip-processor.js', 'dist-sdk/characters/pixel-bot/body.png']) {
+for (const name of ['dist-sdk/index.js', 'dist-sdk/types/index.d.ts', 'dist-sdk/canvas.js', 'dist-sdk/types/canvas/index.d.ts', 'dist-sdk/three.js', 'dist-sdk/types/three/index.d.ts', 'dist-sdk/audio-clip-processor.js', 'dist-sdk/characters/pixel-bot/body.png']) {
   assert.ok(packed.files.some(({ path }) => path === name), 'Missing package file: ' + name);
 }
 const sdkMap = JSON.parse(await readFile('dist-sdk/index.js.map', 'utf8'));
@@ -35,15 +35,19 @@ await cp('examples/sdk-quickstart', fixture, { recursive: true });
 await writeFile(join(fixture, 'package.json'), JSON.stringify({ name: 'sdk-consumer-test', private: true, type: 'module' }));
 run([npm, 'install', '--ignore-scripts', '--no-audit', '--no-fund', '--registry=https://registry.npmjs.org', '--cache', join(root, 'npm-cache'), resolve(packed.filename)], fixture);
 assert.ok(!(await readFile(join(fixture, 'package-lock.json'), 'utf8')).includes('kitten-tts'));
+assert.ok(!(await readFile(join(fixture, 'package-lock.json'), 'utf8')).includes('node_modules/three'), '2D consumers must not install the optional Three.js peer');
+const coreTypes = await readFile('dist-sdk/types/core/Avatar.d.ts', 'utf8');
+assert.ok(!/TalkingSprite|TalkingModel|three\/|canvas\//.test(coreTypes), 'Avatar declarations must be renderer-neutral');
 // Compile public declarations under NodeNext without ambient Vite or test types.
 run([join(root, 'node_modules/typescript/bin/tsc'), '-p', 'tsconfig.json'], fixture);
 run(['--input-type=module', '-e', 'const sdk = await import("@hh1st/hoho-avatar"); if (typeof sdk.createAvatar !== "function") throw Error("Missing SDK API");'], fixture);
+run(['--input-type=module', '-e', 'const { MouthState, MOUTH_STATES, isMouthState } = await import("@hh1st/hoho-avatar"); if (MouthState.Round !== "round" || MOUTH_STATES.length !== 5 || !isMouthState("round") || isMouthState("mouth_round")) throw Error("Invalid mouth vocabulary");'], fixture);
 await mkdir(join(fixture, 'public'), { recursive: true });
 await cp('public/audio/sample-voice.wav', join(fixture, 'public/sample.wav'));
 
 // A plain static server exercises native ESM; a Vite production build exercises asset rewriting.
 const html = await readFile(join(fixture, 'index.html'), 'utf8');
-const imports = { imports: { '@hh1st/hoho-avatar': './node_modules/@hh1st/hoho-avatar/dist-sdk/index.js', '@hh1st/hoho-avatar/characters/pixel-bot': './node_modules/@hh1st/hoho-avatar/dist-sdk/characters/pixel-bot.js' } };
+const imports = { imports: { '@hh1st/hoho-avatar/canvas': './node_modules/@hh1st/hoho-avatar/dist-sdk/canvas.js', '@hh1st/hoho-avatar': './node_modules/@hh1st/hoho-avatar/dist-sdk/index.js', '@hh1st/hoho-avatar/characters/pixel-bot': './node_modules/@hh1st/hoho-avatar/dist-sdk/characters/pixel-bot.js' } };
 await writeFile(join(fixture, 'plain.html'), html.replace('<script type="module"', '<script type="importmap">' + JSON.stringify(imports) + '</script><script type="module"').replace('./main.ts', './plain/main.js'));
 await cp('public/audio/sample-voice.wav', join(fixture, 'sample.wav'));
 await build({ root: fixture, configFile: false, base: '/nested/', logLevel: 'error', build: { outDir: 'built', emptyOutDir: true } });
@@ -67,7 +71,7 @@ await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
 const origin = 'http://127.0.0.1:' + server.address().port;
 let browser;
 try {
-  browser = await chromium.launch({ args: ['--use-fake-device-for-media-stream', '--use-fake-ui-for-media-stream'] });
+  browser = await chromium.launch({ args: ['--use-fake-device-for-media-stream', '--use-fake-ui-for-media-stream', '--enable-unsafe-swiftshader'] });
   for (const path of ['/native/plain.html', '/nested/']) {
     const context = await browser.newContext({ permissions: ['microphone'] });
     const page = await context.newPage();
@@ -113,6 +117,43 @@ try {
     assert.deepEqual(errors, []);
     console.log('PASS ' + path + ': installed tarball, character, audio worklet PCM, microphone, cleanup');
     await context.close();
+  }
+  // The optional entry must work from the installed tarball, not repository source.
+  const threeVersion = JSON.parse(await readFile('node_modules/three/package.json', 'utf8')).version;
+  run([npm, 'install', '--ignore-scripts', '--no-audit', '--no-fund', '--registry=https://registry.npmjs.org', '--cache', join(root, 'npm-cache'), 'three@' + threeVersion], fixture);
+  run(['--input-type=module', '-e', 'const sdk = await import("@hh1st/hoho-avatar/three"); if (typeof sdk.threeRenderer !== "function") throw Error("Missing 3D API");'], fixture);
+  await cp('public/models/mochi/mochi.glb', join(fixture, 'public/mochi.glb'));
+  await cp('public/models/mochi/mochi.glb', join(fixture, 'mochi.glb'));
+  await writeFile(join(fixture, 'three-main.js'), [
+    'import { Avatar, createAvatar } from "@hh1st/hoho-avatar";',
+    'import { threeRenderer } from "@hh1st/hoho-avatar/three";',
+    'const avatar = await createAvatar(document.querySelector("canvas"), { renderer: threeRenderer({ model: "./mochi.glb" }) });',
+    'window.avatar = avatar;',
+    'if (avatar.constructor !== Avatar) throw Error("Every renderer must return the same Avatar class");',
+    'document.querySelector("#status").textContent = avatar.capabilities.mouth.length === 5 ? "Ready" : "Missing morphs";',
+    'document.querySelector("#destroy").onclick = async () => { await avatar.destroy(); document.querySelector("#status").textContent = "Destroyed"; };',
+  ].join('\n'));
+  const threeHtml = '<!doctype html><canvas style="width:400px;height:480px"></canvas><p id="status">Loading</p><button id="destroy">Destroy</button><script type="module" src="./three-main.js"></script>';
+  await writeFile(join(fixture, 'three.html'), threeHtml);
+  const threeImports = { imports: { ...imports.imports,
+    '@hh1st/hoho-avatar/three': './node_modules/@hh1st/hoho-avatar/dist-sdk/three.js',
+    'three': './node_modules/three/build/three.module.js',
+    'three/addons/': './node_modules/three/examples/jsm/',
+  } };
+  await writeFile(join(fixture, 'three-plain.html'), threeHtml.replace('<script type="module"', '<script type="importmap">' + JSON.stringify(threeImports) + '</script><script type="module"'));
+  await build({ root: fixture, configFile: false, base: '/nested/', logLevel: 'error', build: { outDir: 'built', emptyOutDir: false, rolldownOptions: { input: join(fixture, 'three.html') } } });
+  for (const path of ['/native/three-plain.html', '/nested/three.html']) {
+    const page = await browser.newPage();
+    const errors = []; page.on('pageerror', (error) => errors.push(error.message));
+    await page.goto(origin + path);
+    await page.waitForFunction(() => document.querySelector('#status').textContent === 'Ready');
+    await page.evaluate(() => window.avatar.pushPCM(new Float32Array(1440).fill(0.3), 48_000));
+    assert.equal(await page.evaluate(() => window.avatar.getMotionFrame().mouth), 'large');
+    await page.click('#destroy');
+    await page.waitForFunction(() => document.querySelector('#status').textContent === 'Destroyed');
+    assert.deepEqual(errors, []);
+    await page.close();
+    console.log('PASS ' + path + ': optional Three.js entry, Blender GLB, PCM, disposal');
   }
 } finally {
   await browser?.close();

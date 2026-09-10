@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { parseCharacterDefinition } from "../src/core/CharacterDefinition";
+import { MOUTH_STATES } from '../src/core/MouthState';
 
 const validCharacter = () => ({
   version: 1,
@@ -22,10 +23,10 @@ describe("parseCharacterDefinition", () => {
     expect(parseCharacterDefinition(validCharacter())).toEqual(validCharacter());
   });
 
-  it("rejects missing mouth sprites at the engine boundary", () => {
+  it.each(MOUTH_STATES)("rejects missing %s sprite at the engine boundary", (state) => {
     const character = validCharacter();
-    delete (character.mouth.sprites as Partial<typeof character.mouth.sprites>).round;
-    expect(() => parseCharacterDefinition(character)).toThrow(/round/);
+    delete (character.mouth.sprites as Partial<typeof character.mouth.sprites>)[state];
+    expect(() => parseCharacterDefinition(character)).toThrow(state);
   });
 
   it("rejects invalid dimensions and animation values", () => {
@@ -33,4 +34,3 @@ describe("parseCharacterDefinition", () => {
     expect(() => parseCharacterDefinition({ ...validCharacter(), animation: { bodyBouncePx: -1 } })).toThrow(/bodyBouncePx/);
   });
 });
-

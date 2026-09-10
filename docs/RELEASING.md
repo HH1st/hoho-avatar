@@ -10,12 +10,12 @@ If npm requires an initial package before a trusted publisher can be registered,
 
 ## Release a reviewed version
 
-1. Update the root SDK `package.json`, lockfile, documented local tarball filenames and changelog. Keep demo dependencies on an existing published version until the new SDK is available on npm.
-2. Install repository dependencies and run `npm run setup:demo`, then `npm run typecheck`, `npm test`, `npm run build`, `npm run test:e2e` and `npm run test:package` with Chromium installed. The demo checks exercise the published SDK; the package test exercises the SDK being released.
+1. Update the root SDK `package.json`, lockfile, documented local tarball filenames and changelog. The Studio imports local SDK source; keep the quickstart dependency on an existing published version until the new SDK is available on npm.
+2. Install repository dependencies and run `npm run setup:demo`, then `npm run typecheck`, `npm test`, `npm run build`, `npm run test:e2e` and `npm run test:package` with Chromium installed. The unified demo checks exercise the checked-out SDK; the package test exercises the SDK being released.
 3. Inspect `npm pack --dry-run` for the runtime, types, source maps, original robot assets, README and license only.
 4. Commit using the repository identity `HH1st`.
 5. Create and push the matching `vX.Y.Z` tag after release authorization. The workflow verifies the tag/version, tests the tarball and publishes that exact tarball with npm provenance via OIDC.
-6. Verify the public install and add release notes. Update both example dependency versions, the studio lockfile and installation docs in a follow-up commit. Prereleases use `next`; stable releases use `latest`.
+6. Verify the public install and add release notes. Update the quickstart dependency version and installation docs in a follow-up commit. Prereleases use `next`; stable releases use `latest`.
 
 The first preview release is `0.1.0-beta.1`, using the `next` dist-tag. The local bootstrap command, after npm authentication, is `npm publish ./hh1st-hoho-avatar-0.1.0-beta.1.tgz --access public --tag next --registry=https://registry.npmjs.org`. Local bootstrap does not claim OIDC provenance; configured GitHub trusted-publishing runs attach it.
 

@@ -3,7 +3,9 @@
   "private": true,
   "type": "module",
   "license": "MIT",
-  "engines": { "node": ">=20.19.0" },
+  "engines": {
+    "node": ">=20.19.0"
+  },
   "scripts": {
     "dev": "vite",
     "typecheck": "tsc --noEmit",
@@ -11,7 +13,6 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@hh1st/hoho-avatar": "0.1.0-beta.1",
     "fflate": "^0.8.2",
     "kitten-tts-webgpu": "^0.1.1"
   },
@@ -19,5 +20,7 @@
     "typescript": "^7.0.2",
     "vite": "^8.2.0"
   },
-  "overrides": { "nanoid": "3.3.18" }
+  "overrides": {
+    "nanoid": "3.3.18"
+  }
 }

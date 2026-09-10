@@ -1,6 +1,6 @@
 # SDK integration
 
-The SDK is framework-independent ESM with TypeScript declarations. It installs no runtime dependencies, injects no UI or CSS, and does not connect to an AI service. Rendering uses Canvas 2D and five heuristic mouth states; this is not phoneme-level lip sync.
+The SDK is framework-independent ESM with TypeScript declarations. The core entry has no renderer dependency, injects no UI or CSS, and does not connect to an AI service. Canvas and Three.js implement the same interface. Only the Three.js implementation requires its optional peer. Both use five heuristic mouth states; this is not phoneme-level lip sync.
 
 ## Install the preview
 
@@ -8,7 +8,7 @@ The SDK is framework-independent ESM with TypeScript declarations. It installs n
 npm install @hh1st/hoho-avatar@next --registry=https://registry.npmjs.org
 ```
 
-The current preview version is `0.1.0-beta.2`. Pin that exact version for reproducible application builds. The 0.1.x API is early; minor versions may introduce breaking changes.
+The API below is unreleased source. Use a local tarball to try it. Published beta.1 uses the earlier API; beta.2 registry publication is pending. Both renderer implementations now require explicit selection.
 
 For a local source build, run `npm install` and `npm pack` in the repository, then install `/path/to/hh1st-hoho-avatar-0.1.0-beta.2.tgz` in your application.
 
@@ -22,11 +22,12 @@ For a local source build, run `npm install` and `npm pack` in the repository, th
 
 ```ts
 import { createAvatar } from "@hh1st/hoho-avatar";
+import { canvasRenderer } from "@hh1st/hoho-avatar/canvas";
 import pixelBot from "@hh1st/hoho-avatar/characters/pixel-bot";
 
 const avatar = await createAvatar(
   document.querySelector<HTMLCanvasElement>("#avatar")!,
-  { character: pixelBot },
+  { renderer: canvasRenderer({ character: pixelBot }) },
 );
 
 document.querySelector("#mic")!.addEventListener("click", () => {
@@ -38,7 +39,7 @@ document.querySelector("#stop")!.addEventListener("click", () => avatar.stopAudi
 // await avatar.destroy();
 ```
 
-Creation waits for all character images and starts rendering. It neither creates an AudioContext nor requests microphone permission. Call audio-starting methods inside a click/tap handler to satisfy autoplay policies. Microphone access requires HTTPS or localhost.
+Creation waits for the chosen renderer and its character assets and starts rendering. It neither creates an AudioContext nor requests microphone permission. Call audio-starting methods inside a click/tap handler to satisfy autoplay policies. Microphone access requires HTTPS or localhost.
 
 The included Pixel Bot is original MIT artwork. Other demo characters, TTS models, dictionaries, recordings and Azure gateway code are not shipped in the package.
 
@@ -46,7 +47,7 @@ The included Pixel Bot is original MIT artwork. Other demo characters, TTS model
 
 | API | Behavior |
 | --- | --- |
-| `createAvatar(canvas, options)` | Resolves to a ready, rendering `Avatar`. `character` is required; `sampleRate` defaults to 48,000. |
+| `createAvatar(canvas, options)` | Resolves to a ready, rendering `Avatar`. `renderer` is required; `sampleRate` defaults to 48,000. |
 | `avatar.startMicrophone()` | Starts local mono capture. Resolves after permission and capture setup; replaces prior owned audio. |
 | `avatar.playAudio(urlOrBlobOrArrayBuffer)` | Loads, decodes and plays a file. Resolves to audio metadata when playback starts. Automatically matches the decoded processing rate. |
 | `avatar.stopAudio()` | Immediately cancels startup, silences playback, releases microphone tracks and closes the mouth. AudioContext close completes asynchronously. |
@@ -57,16 +58,51 @@ The included Pixel Bot is original MIT artwork. Other demo characters, TTS model
 
 `playAudio()` and `startMicrophone()` replace the previous operation. A replaced/cancelled startup rejects with `AbortError`; handle that as intentional cancellation. Other failures reject with the original error. URL fetches obey CORS.
 
-Since `0.1.0-beta.2`, `MicrophoneInput` uses the shared audio worklet to emit 20 ms mono `Float32Array` packets at the `AudioContext` sample rate. Its output is muted locally. Worklet module loading is part of setup; cancellation and setup failures release acquired tracks and close the context. The PCM callback and network sending still run on the main thread. The studio's pinned `0.1.0-beta.1` dependency does not include this migration yet.
+Since `0.1.0-beta.2`, `MicrophoneInput` uses the shared audio worklet to emit 20 ms mono `Float32Array` packets at the `AudioContext` sample rate. Its output is muted locally. Worklet module loading is part of setup; cancellation and setup failures release acquired tracks and close the context. The PCM callback and network sending still run on the main thread. The Studio now imports local SDK source, so it includes this migration.
 
-`TalkingSprite`, `PCMAnalyzer`, `MouthClassifier`, `AudioClipPlayer`, `AudioQueuePlayer`, `StreamingTTSPlayer`, `StreamingPCMPlayer`, `VuiClient`, `MicrophoneInput` and their option types remain available for lower-level integrations. `TalkingSprite.setSampleRate(rate)` resets analysis without reloading images. `setState()` currently stores state; it does not add expressive state animations.
+## One interface, two implementations
+
+Mouth states are defined once in the core and exported as both runtime constants and a string-union type. Classification, character validation, renderer capabilities, morph mapping and Studio controls all use this definition:
+
+~~~ts
+import { MouthState, MOUTH_STATES, isMouthState } from '@hh1st/hoho-avatar';
+
+avatar.previewMouth(MouthState.Round);
+const supported = MOUTH_STATES.filter(state => avatar.capabilities.mouth.includes(state));
+// At JSON/UI boundaries, narrow unknown values before passing them to the SDK.
+if (isMouthState(value)) avatar.previewMouth(value);
+~~~
+
+The values remain closed, small, large, wide and round, preserving existing JSON/asset names. MouthState is an immutable enum-style object with a derived type; MOUTH_STATES is its immutable ordered value list. Renderers do not define their own mouth enums. Blender shape-key names such as mouth_round are renderer mappings, not new states.
+
+The package root exports the common Avatar, createAvatar, MotionController, audio primitives and renderer contracts. It imports neither renderer. The /canvas and /three entries export factories with the same RendererFactory signature:
+
+```ts
+import { createAvatar } from '@hh1st/hoho-avatar';
+import { canvasRenderer } from '@hh1st/hoho-avatar/canvas';
+import { threeRenderer } from '@hh1st/hoho-avatar/three';
+
+const a = await createAvatar(canvasA, {
+  renderer: canvasRenderer({ character: '/characters/pixel-bot/character.json' }),
+});
+const b = await createAvatar(canvasB, {
+  renderer: threeRenderer({ model: '/models/mochi/mochi.glb' }),
+});
+// a and b are both Avatar, with the same methods and lifecycle.
+```
+
+Only import the implementation your application uses. A Canvas consumer does not need to install Three.js; core and Canvas declarations do not reference its types. Both implementations have ready, capabilities, render, reset, resize, resetView, setViewControlEnabled and destroy. Capabilities report mouth targets, blinking and interactive view support; unsupported view controls are no-ops. Asset formats and constructor configuration differ, while runtime control stays uniform.
+
+Avatar exposes capabilities, setState/getState, previewMouth/previewBlink, resize, resetView, setViewControlEnabled, start/stop and resetAudio alongside its audio methods. stop() pauses animation; stopAudio() releases owned audio. Previews work on both implementations. MotionController generates RenderFrame values and owns the only analysis, blink and animation loop.
+
+Migration: select canvasRenderer({ character }) or threeRenderer({ model }) in the same createAvatar(canvas, { renderer }) call. The old TalkingSprite, TalkingModel and separate 3D avatar factory are replaced by explicit renderer injection. See [the 3D guide](THREE.md) for Blender authoring and model requirements.
 
 ## AI / TTS integration
 
 For a provider that already plays audio, feed PCM at its playback cadence:
 
 ```ts
-const avatar = await createAvatar(canvas, { character: pixelBot, sampleRate: 24_000 });
+const avatar = await createAvatar(canvas, { renderer: canvasRenderer({ character: pixelBot }), sampleRate: 24_000 });
 const unsubscribe = provider.onPlayedAudio((pcm: Int16Array) => avatar.pushPCM(pcm));
 // On interruption/end: avatar.stopAudio();
 // On teardown: unsubscribe(); await avatar.destroy();
@@ -78,7 +114,7 @@ Do not push an entire recording at once: the avatar renders the most recent fram
 
 Pass the URL of a V1 `character.json`, with images stored beside it, or a validated `CharacterDefinition` containing image URLs. A relative image path in a JSON file resolves relative to that JSON URL. Paths in an object resolve against the document base URI.
 
-The bundled robot entry contains asset URLs relative to its ESM module. Vite production builds copy those assets automatically. The SDK worklet is a separate `audio-clip-processor.js` file, not an inline blob; retain it beside `index.js` if serving the package directly. Native browser ESM and Vite builds on a nested base path are covered by the package consumer test. Other bundlers should preserve `new URL(..., import.meta.url)` asset references.
+The bundled robot entry contains asset URLs relative to its ESM module. Vite production builds copy those assets automatically. The SDK worklet is a separate `audio-clip-processor.js` file, not an inline blob; retain the complete `dist-sdk/` directory, including shared JavaScript chunks, if serving the package directly. Native browser ESM and Vite builds on a nested base path are covered by the package consumer test. Other bundlers should preserve `new URL(..., import.meta.url)` asset references.
 
 For a plain browser app, serve the installed `dist-sdk/` folder over HTTP(S) and import `index.js` and `characters/pixel-bot.js` by URL, or map those URLs using an import map. Opening files through `file://` is unsupported. A same-origin deployment needs no `blob:` or `data:` permission for worklet scripts.
 
@@ -90,7 +126,7 @@ Create after a canvas mounts; destroy when it unmounts. In React effects, handle
 useEffect(() => {
   let disposed = false;
   let instance: Avatar | undefined;
-  void createAvatar(canvasRef.current!, { character: pixelBot }).then((avatar) => {
+  void createAvatar(canvasRef.current!, { renderer: canvasRenderer({ character: pixelBot }) }).then((avatar) => {
     if (disposed) void avatar.destroy();
     else instance = avatar;
   }).catch(console.error);
@@ -102,8 +138,8 @@ Do not construct the avatar during server rendering. Importing the package on th
 
 ## Validation and release
 
-The main studio in `examples/basic/` is an independent npm application with its own package manifest and lockfile. It installs `@hh1st/hoho-avatar@0.1.0-beta.1` from the public npm registry, and imports only the installed package. The quickstart also installs a versioned package from npm.
+The single Studio in `examples/basic/` imports local SDK source for both renderers. The separate SDK quickstart is a package-consumer fixture used to verify native browser and bundler integration.
 
-Run `npm run setup:demo` after installing repository dependencies. `npm run dev`, `npm run dev:all`, and `npm run build` use the installed SDK; the demo output is `examples/basic/dist/`. The GitHub Pages job checks out only `examples/basic/` and `public/`, installs the same lockfile, and builds without SDK source. Changes to `src/` affect the demo only after publishing a new SDK version and updating the demo dependency and lockfile. `npm run build:sdk` and `npm pack` remain separate SDK development commands.
+Run `npm run setup:demo` after installing repository dependencies. `npm run dev`, `npm run dev:all`, and `npm run build` use the checked-out SDK; the only Studio output is `examples/basic/dist/`. GitHub Pages builds the same source and supports both character types. `npm run build:sdk` and `npm pack` remain separate SDK distribution commands.
 
 `npm run test:package` builds and inspects the tarball, installs it into a fresh consumer, checks NodeNext types and server-side import, then runs native ESM and Vite production browser checks for character loading, audio-worklet PCM, microphone capture and disposal. See [RELEASING.md](https://github.com/HH1st/hoho-avatar/blob/main/docs/RELEASING.md) before publishing.

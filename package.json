@@ -42,9 +42,12 @@
   "devDependencies": {
     "@azure/identity": "^4.13.2",
     "@playwright/test": "^1.63.0",
+    "@types/node": "^22.20.2",
+    "@types/three": "^0.185.4",
     "fflate": "^0.8.2",
     "kitten-tts-webgpu": "^0.1.1",
     "magic-string": "^0.30.21",
+    "three": "^0.185.1",
     "typescript": "^7.0.2",
     "vite": "^8.2.0",
     "vitest": "^4.1.10",
@@ -62,6 +65,14 @@
       "types": "./dist-sdk/characters/pixel-bot.d.ts",
       "import": "./dist-sdk/characters/pixel-bot.js"
     },
+    "./three": {
+      "types": "./dist-sdk/types/three/index.d.ts",
+      "import": "./dist-sdk/three.js"
+    },
+    "./canvas": {
+      "types": "./dist-sdk/types/canvas/index.d.ts",
+      "import": "./dist-sdk/canvas.js"
+    },
     "./package.json": "./package.json"
   },
   "files": [
@@ -69,11 +80,20 @@
     "README.md",
     "LICENSE",
     "docs/SDK.md",
+    "docs/THREE.md",
     "CHANGELOG.md"
   ],
   "sideEffects": [
     "./dist-sdk/audio-clip-processor.js"
   ],
+  "peerDependencies": {
+    "three": "^0.185.0"
+  },
+  "peerDependenciesMeta": {
+    "three": {
+      "optional": true
+    }
+  },
   "publishConfig": {
     "access": "public",
     "registry": "https://registry.npmjs.org",

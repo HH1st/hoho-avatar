@@ -11,7 +11,7 @@ export default defineConfig(({ mode }) => {
     root,
     base: "/hoho-avatar/",
     envDir: repository,
-    // Shared demo artwork and audio only; the SDK is installed from npm.
+    // One studio exercises the checked-out SDK with either renderer.
     publicDir: fileURLToPath(new URL("../../public/", import.meta.url)),
     optimizeDeps: { entries: ["index.html"] },
     server: {

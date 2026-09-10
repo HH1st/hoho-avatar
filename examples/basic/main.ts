@@ -1,5 +1,6 @@
-import { AudioClipPlayer, MicrophoneInput, StreamingTTSPlayer, TalkingSprite } from "@hh1st/hoho-avatar";
-import type { AudioClipMetadata, CharacterDefinition, CharacterState } from "@hh1st/hoho-avatar";
+import { AudioClipPlayer, MicrophoneInput, StreamingTTSPlayer, createAvatar, MouthState, MOUTH_STATES } from "../../src";
+import type { AudioClipMetadata, CharacterDefinition, CharacterState, Avatar, AvatarRenderer, RendererFactory } from "../../src";
+import { canvasRenderer } from '../../src/canvas';
 import { loadCharacterPackage, type LoadedCharacterPackage } from "./characterPackage";
 import { VoiceSession, type VoiceSessionState } from "./VoiceSession";
 import "./style.css";
@@ -15,7 +16,7 @@ updateStudioViewport();
 window.visualViewport?.addEventListener("resize", updateStudioViewport);
 window.addEventListener("resize", updateStudioViewport);
 
-const canvas = document.querySelector<HTMLCanvasElement>("#avatar")!;
+let canvas = document.querySelector<HTMLCanvasElement>("#avatar")!;
 const micButton = document.querySelector<HTMLButtonElement>("#micButton")!;
 const buttonLabel = document.querySelector("#buttonLabel")!;
 const statusText = document.querySelector("#statusText")!;
@@ -70,7 +71,11 @@ const barElements = Array.from({ length: 32 }, () => {
   return bar;
 });
 
-let sprite: TalkingSprite | undefined;
+let avatarInstance: Avatar | undefined;
+let pendingRenderer: AvatarRenderer | undefined;
+let mountEpoch = 0;
+let customModel: { bytes: ArrayBuffer; name: string } | undefined;
+let blinkTimer: ReturnType<typeof setTimeout> | undefined;
 let microphone: MicrophoneInput | undefined;
 let micAbort: AbortController | undefined;
 let activeProvider: ProviderName = "mic";
@@ -103,7 +108,12 @@ const avatars = {
   },
 } as const;
 
-function selectedAvatar(): { character: string | CharacterDefinition; label: string; defaultText: string } {
+function selectedAvatar(): { character?: string | CharacterDefinition; model?: string | ArrayBuffer; label: string; defaultText: string } {
+  if (avatarSelect.value === 'mochi' || (avatarSelect.value === 'custom-model' && customModel)) {
+    const imported = avatarSelect.value === 'custom-model' ? customModel : undefined;
+    return { model: imported?.bytes ?? import.meta.env.BASE_URL + 'models/mochi/mochi.glb',
+      label: imported?.name ?? 'Mochi', defaultText: "Hey, I'm Mochi. What's on your mind?" };
+  }
   if (avatarSelect.value === "custom" && customAvatar) {
     return {
       character: customAvatar.definition,
@@ -121,6 +131,8 @@ function syncDefaultTTSText() {
 }
 
 function syncCharacterChoices() {
+  document.querySelector<HTMLElement>('#customModelButton')!.hidden = !customModel;
+  document.querySelector('#customModelName')!.textContent = customModel?.name ?? 'Your model';
   customAvatarButton.hidden = !customAvatar;
   customAvatarName.textContent = customAvatar?.name ?? "Your character";
   for (const choice of characterChoices) {
@@ -131,13 +143,24 @@ function syncCharacterChoices() {
   }
 }
 
-const hints = {
-  closed: "waiting for signal",
-  small: "soft articulation",
-  large: "high energy",
-  wide: "bright frequencies",
-  round: "low vowel shape",
+const hints: Record<MouthState, string> = {
+  [MouthState.Closed]: "waiting for signal",
+  [MouthState.Small]: "soft articulation",
+  [MouthState.Large]: "high energy",
+  [MouthState.Wide]: "bright frequencies",
+  [MouthState.Round]: "low vowel shape",
 };
+const mouthLabels: Record<MouthState, string> = {
+  [MouthState.Closed]: 'Rest', [MouthState.Small]: 'Small', [MouthState.Large]: 'Open',
+  [MouthState.Wide]: 'Wide', [MouthState.Round]: 'Round',
+};
+const mouthButtons = MOUTH_STATES.map((state) => {
+  const button = document.createElement('button');
+  button.type = 'button'; button.dataset.mouth = state; button.textContent = mouthLabels[state];
+  button.setAttribute('aria-pressed', 'false');
+  document.querySelector('#blinkPreview')!.before(button);
+  return { state, button };
+});
 
 function updateMeter(energy: number) {
   const active = Math.round(energy * barElements.length);
@@ -147,17 +170,47 @@ function updateMeter(energy: number) {
   dbValue.textContent = Number.isFinite(db) ? `${db.toFixed(1)} dB` : "−∞ dB";
 }
 
-async function mountSelectedSprite(sampleRate: number, state: CharacterState, signal: AbortSignal = providerAbort.signal) {
+async function mountSelectedAvatar(sampleRate: number, state: CharacterState, signal: AbortSignal = providerAbort.signal) {
   signal?.throwIfAborted();
+  const epoch = ++mountEpoch;
   const avatar = selectedAvatar();
-  sprite?.destroy();
-  const next = new TalkingSprite(canvas, { character: avatar.character, sampleRate });
-  sprite = next;
+  avatarInstance?.destroy();
+  avatarInstance = undefined; pendingRenderer?.destroy(); pendingRenderer = undefined; clearTimeout(blinkTimer);
+  const fresh = canvas.cloneNode(false) as HTMLCanvasElement;
+  canvas.replaceWith(fresh); canvas = fresh;
+  stageWrap.dataset.renderer = avatar.model ? '3d' : '2d';
+  stageWrap.dataset.loaded = 'false';
+  document.querySelector<HTMLElement>('#modelTools')!.hidden = true;
+  document.querySelector('#blinkPreview')!.setAttribute('aria-pressed', 'false');
+  const factory: RendererFactory = avatar.model
+    ? (await import('../../src/three')).threeRenderer({ model: avatar.model, background: null,
+        onError: (error) => { if (epoch === mountEpoch) uploadStatus.textContent = error.message; } })
+    : canvasRenderer({ character: avatar.character! });
+  if (epoch !== mountEpoch) return;
   stageLabel.textContent = avatar.label;
   stageWrap.dataset.character = avatarSelect.value;
   syncCharacterChoices();
-  await next.ready;
-  if (sprite !== next) return;
+  let next: Avatar;
+  try {
+    next = await createAvatar(canvas, { sampleRate, renderer: (target) => {
+      const renderer = factory(target); pendingRenderer = renderer; return renderer;
+    } });
+  } catch (error) {
+    if (epoch !== mountEpoch) return;
+    pendingRenderer = undefined; throw error;
+  }
+  if (epoch !== mountEpoch) { await next.destroy(); return; }
+  avatarInstance = next; pendingRenderer = undefined;
+  stageWrap.dataset.loaded = 'true';
+  document.querySelector<HTMLElement>('#modelTools')!.hidden = false;
+  document.querySelector<HTMLElement>('#viewHint')!.textContent = next.capabilities.viewControl
+    ? 'Drag to orbit, scroll to zoom' : 'Preview expressions';
+  document.querySelector<HTMLElement>('#resetView')!.hidden = !next.capabilities.viewControl;
+  for (const { state, button } of mouthButtons) {
+    button.disabled = !next.capabilities.mouth.includes(state);
+    button.setAttribute('aria-pressed', 'false');
+  }
+  document.querySelector<HTMLButtonElement>('#blinkPreview')!.disabled = !next.capabilities.blink;
   next.start();
   next.setState(signal.aborted ? "idle" : state);
   if (signal.aborted) next.resetAudio();
@@ -191,11 +244,11 @@ function updateClipControls() {
 
 function ensureClipPlayer(): AudioClipPlayer {
   clipPlayer ??= new AudioClipPlayer({
-    onPCM: (chunk) => { if (activeProvider === "file") sprite?.pushPCM(chunk); },
+    onPCM: (chunk) => { if (activeProvider === "file") avatarInstance?.pushPCM(chunk); },
     onProgress: updateClipProgress,
     onEnded: () => {
       if (activeProvider !== "file") return;
-      sprite?.resetAudio();
+      avatarInstance?.resetAudio();
       statusText.textContent = "CLIP READY";
       statusDot.classList.remove("live");
       audioStatus.textContent = clipMetadata?.name ?? "AUDIO READY";
@@ -209,7 +262,7 @@ function stopAudioClip() {
   ++clipEpoch;
   clipLoading = false;
   if (clipPlayer?.state === "playing") clipPlayer.stop();
-  sprite?.resetAudio();
+  avatarInstance?.resetAudio();
   if (activeProvider === "file") {
     statusText.textContent = clipMetadata ? "CLIP READY" : "STANDBY";
     statusDot.classList.remove("live");
@@ -240,7 +293,7 @@ function ensureTTSPlayer(): StreamingTTSPlayer {
         onProgress: options.onProgress,
       });
     },
-    onPCM: (chunk) => { if (activeProvider === "tts") sprite?.pushPCM(chunk); },
+    onPCM: (chunk) => { if (activeProvider === "tts") avatarInstance?.pushPCM(chunk); },
     minChunkCharacters: 24,
     maxChunkCharacters: 64,
     prebufferChunks: 1,
@@ -265,7 +318,7 @@ function ensureTTSPlayer(): StreamingTTSPlayer {
       if (activeProvider !== "tts") return;
       if (!ttsPlaybackStarted) {
         ttsPlaybackStarted = true;
-        await mountSelectedSprite(metadata.sampleRate, "speaking");
+        await mountSelectedAvatar(metadata.sampleRate, "speaking");
         sampleRateLabel.textContent = `${(metadata.sampleRate / 1000).toFixed(1)} kHz`;
       }
       if (epoch !== ttsEpoch || activeProvider !== "tts") return;
@@ -276,7 +329,7 @@ function ensureTTSPlayer(): StreamingTTSPlayer {
     },
     onEnded: () => {
       if (activeProvider !== "tts") return;
-      sprite?.resetAudio();
+      avatarInstance?.resetAudio();
       ttsPlaybackStarted = false;
       ttsStatus.textContent = "READY // ENGLISH / WEBGPU";
       statusText.textContent = "STANDBY";
@@ -286,7 +339,7 @@ function ensureTTSPlayer(): StreamingTTSPlayer {
     onError: (error) => {
       if (activeProvider !== "tts") return;
       console.error(error);
-      sprite?.resetAudio();
+      avatarInstance?.resetAudio();
       ttsPlaybackStarted = false;
       ttsStatus.textContent = error instanceof Error ? error.message.toUpperCase() : "TTS FAILED";
       statusText.textContent = "TTS ERROR";
@@ -301,7 +354,7 @@ function stopTTS() {
   ++ttsEpoch;
   if (ttsPlayer && ttsPlayer.state !== "idle" && ttsPlayer.state !== "destroyed") ttsPlayer.stop();
   ttsPlaybackStarted = false;
-  sprite?.resetAudio();
+  avatarInstance?.resetAudio();
   const stopping = ttsPlayer?.state === "stopping";
   ttsStatus.textContent = stopping ? "STOPPING GPU SYNTHESIS…" : "READY // ENGLISH / WEBGPU";
   if (activeProvider === "tts") {
@@ -368,7 +421,7 @@ async function loadAudioClip(file: File, expectedEpoch = clipEpoch) {
   audioStatus.textContent = metadata.name ?? "AUDIO READY";
   sampleRateLabel.textContent = `${(metadata.sampleRate / 1000).toFixed(1)} kHz`;
   try {
-    await mountSelectedSprite(metadata.sampleRate, "idle");
+    await mountSelectedAvatar(metadata.sampleRate, "idle");
     if (epoch === clipEpoch && activeProvider === "file") statusText.textContent = "CLIP READY";
   } catch (error) {
     console.error(error);
@@ -384,7 +437,7 @@ async function playAudioClip() {
   if (!clipMetadata || activeProvider !== "file") return;
   const epoch = clipEpoch;
   stopTTS();
-  await mountSelectedSprite(clipMetadata.sampleRate, "speaking");
+  await mountSelectedAvatar(clipMetadata.sampleRate, "speaking");
   if (epoch !== clipEpoch || activeProvider !== "file") return;
   await ensureClipPlayer().play();
   if (epoch !== clipEpoch || activeProvider !== "file") return;
@@ -418,6 +471,7 @@ async function playSampleAudio() {
 
 async function importAvatar(file: File) {
   if (avatarSelect.disabled) return;
+  if (file.name.toLowerCase().endsWith('.glb')) { await importModel(file); return; }
   uploadButton.disabled = true;
   avatarSelect.disabled = true;
   syncCharacterChoices();
@@ -438,7 +492,7 @@ async function importAvatar(file: File) {
     avatarSelect.value = "custom";
     try {
       const state: CharacterState = microphone ? "listening" : clipPlayer?.state === "playing" ? "speaking" : "idle";
-      await mountSelectedSprite(currentSampleRate(), state);
+      await mountSelectedAvatar(currentSampleRate(), state);
       syncDefaultTTSText();
       previousAvatar?.dispose();
     } catch (error) {
@@ -448,7 +502,7 @@ async function importAvatar(file: File) {
       else customOption.remove();
       avatarSelect.value = previousAvatar ? "custom" : "niu-lai";
       const state: CharacterState = microphone ? "listening" : clipPlayer?.state === "playing" ? "speaking" : "idle";
-      await mountSelectedSprite(currentSampleRate(), state);
+      await mountSelectedAvatar(currentSampleRate(), state);
       throw error;
     }
     uploadStatus.textContent = `${nextAvatar.name} loaded locally`;
@@ -465,10 +519,33 @@ async function importAvatar(file: File) {
   }
 }
 
+async function importModel(file: File) {
+  if (file.size > 25 * 1024 * 1024) { uploadStatus.textContent = 'Choose a GLB smaller than 25 MB.'; return; }
+  const previous = customModel;
+  const previousSelection = avatarSelect.value;
+  avatarSelect.disabled = true; uploadButton.disabled = true; syncCharacterChoices();
+  try {
+    customModel = { bytes: await file.arrayBuffer(), name: file.name.replace(/\.glb$/i, '') };
+    let option = avatarSelect.querySelector<HTMLOptionElement>('option[value="custom-model"]');
+    if (!option) { option = new Option('Your 3D model', 'custom-model'); avatarSelect.add(option); }
+    avatarSelect.value = 'custom-model';
+    await mountSelectedAvatar(currentSampleRate(), avatarInstance?.getState() ?? 'idle');
+    syncDefaultTTSText();
+    uploadStatus.textContent = customModel.name + ' loaded locally';
+    uploadStatus.classList.remove('error');
+  } catch (error) {
+    customModel = previous; avatarSelect.value = previousSelection;
+    if (!previous) avatarSelect.querySelector('option[value="custom-model"]')?.remove();
+    await mountSelectedAvatar(currentSampleRate(), 'idle');
+    uploadStatus.textContent = error instanceof Error ? error.message : 'Unable to load this GLB.';
+    uploadStatus.classList.add('error');
+  } finally { avatarSelect.disabled = false; uploadButton.disabled = false; avatarFile.value = ''; syncCharacterChoices(); }
+}
+
 async function startMic() {
   if (microphone || activeProvider !== "mic") return;
   const capture = new MicrophoneInput((chunk) => {
-    if (microphone === capture && activeProvider === "mic") sprite?.pushPCM(chunk);
+    if (microphone === capture && activeProvider === "mic") avatarInstance?.pushPCM(chunk);
   });
   const abort = new AbortController();
   microphone = capture;
@@ -479,7 +556,7 @@ async function startMic() {
     await capture.prepare();
     await capture.start(abort.signal);
     if (microphone !== capture) return;
-    await mountSelectedSprite(capture.sampleRate, "listening", abort.signal);
+    await mountSelectedAvatar(capture.sampleRate, "listening", abort.signal);
     if (microphone !== capture) return;
     sampleRateLabel.textContent = `${(capture.sampleRate / 1000).toFixed(1)} kHz`;
     micButton.classList.add("recording");
@@ -503,8 +580,8 @@ function stopMic(): Promise<void> {
   micAbort = undefined;
   micButton.classList.remove("recording");
   buttonLabel.textContent = "Start microphone";
-  sprite?.resetAudio();
-  sprite?.setState("idle");
+  avatarInstance?.resetAudio();
+  avatarInstance?.setState("idle");
   if (activeProvider === "mic") {
     statusText.textContent = "STANDBY";
     statusDot.classList.remove("live");
@@ -522,11 +599,11 @@ function voiceAgentUrl(): string {
 const voiceSession = new VoiceSession({
   gatewayUrl: voiceAgentUrl(),
   healthUrl: localVoiceAgentAvailable && !configuredVoiceAgentUrl ? "/voice-agent/healthz" : undefined,
-  onPCM: (chunk) => { if (activeProvider === "agent") sprite?.pushPCM(chunk); },
-  onReset: () => { if (activeProvider === "agent") sprite?.resetAudio(); },
+  onPCM: (chunk) => { if (activeProvider === "agent") avatarInstance?.pushPCM(chunk); },
+  onReset: () => { if (activeProvider === "agent") avatarInstance?.resetAudio(); },
   onTranscript: (text) => { agentTranscript.textContent = text; },
   onReady: async (sampleRate, signal) => {
-    await mountSelectedSprite(sampleRate, "listening", signal);
+    await mountSelectedAvatar(sampleRate, "listening", signal);
     if (!signal.aborted) sampleRateLabel.textContent = `${(sampleRate / 1000).toFixed(1)} kHz`;
   },
   onState: (state, error) => {
@@ -536,8 +613,8 @@ const voiceSession = new VoiceSession({
     statusText.textContent = `AGENT ${state.toUpperCase()}`;
     const live = state === "listening" || state === "thinking" || state === "speaking";
     statusDot.classList.toggle("live", live);
-    sprite?.setState(live ? state : "idle");
-    if (!live) sprite?.resetAudio();
+    avatarInstance?.setState(live ? state : "idle");
+    if (!live) avatarInstance?.resetAudio();
   },
 });
 
@@ -572,9 +649,9 @@ function selectProvider(provider: ProviderName) {
     updateClipControls();
   }
   if (provider !== "tts") stopTTS();
-  sprite?.resetAudio();
-  sprite?.setState("idle");
-  void mountSelectedSprite(currentSampleRate(), "idle").catch(console.error);
+  avatarInstance?.resetAudio();
+  avatarInstance?.setState("idle");
+  void mountSelectedAvatar(currentSampleRate(), "idle").catch(console.error);
   statusText.textContent = "STANDBY";
   statusDot.classList.remove("live");
   for (const tab of providerTabs) {
@@ -603,7 +680,7 @@ avatarSelect.addEventListener("change", async () => {
   syncCharacterChoices();
   try {
     const state: CharacterState = microphone ? "listening" : clipPlayer?.state === "playing" || ttsPlayer?.state === "playing" ? "speaking" : "idle";
-    await mountSelectedSprite(currentSampleRate(), state);
+    await mountSelectedAvatar(currentSampleRate(), state);
     syncDefaultTTSText();
   } catch (error) {
     uploadStatus.textContent = error instanceof Error ? error.message : "Unable to load this character.";
@@ -715,6 +792,7 @@ stageWrap.addEventListener("drop", (event) => {
 });
 
 window.addEventListener("beforeunload", () => {
+  ++mountEpoch; clearTimeout(blinkTimer); void avatarInstance?.destroy(); avatarInstance = undefined; pendingRenderer?.destroy();
   micAbort?.abort();
   void microphone?.destroy();
   void clipPlayer?.destroy();
@@ -723,7 +801,23 @@ window.addEventListener("beforeunload", () => {
   customAvatar?.dispose();
 });
 
-mountSelectedSprite(48000, "idle").catch(console.error);
+document.querySelector('#resetView')!.addEventListener('click', () => avatarInstance?.resetView());
+for (const { state, button } of mouthButtons) {
+  button.addEventListener('click', () => {
+    const selected = button.getAttribute('aria-pressed') !== 'true';
+    avatarInstance?.previewMouth(selected ? state : undefined);
+    for (const { button: other } of mouthButtons) other.setAttribute('aria-pressed', String(other === button && selected));
+  });
+}
+document.querySelector('#blinkPreview')!.addEventListener('click', () => {
+  clearTimeout(blinkTimer); avatarInstance?.previewBlink(true);
+  document.querySelector('#blinkPreview')!.setAttribute('aria-pressed', 'true');
+  blinkTimer = setTimeout(() => { avatarInstance?.previewBlink(false); document.querySelector('#blinkPreview')!.setAttribute('aria-pressed', 'false'); }, 250);
+});
+
+if (new URLSearchParams(location.search).get('character') === 'mochi') avatarSelect.value = 'mochi';
+
+mountSelectedAvatar(48000, "idle").catch(console.error);
 updateClipControls();
 updateTTSControls();
 updateVoiceAgentControls();

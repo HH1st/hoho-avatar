@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Avatar, createAvatar } from '../src/core/Avatar';
-import type { TalkingSprite } from '../src/core/TalkingSprite';
+import type { MotionController } from '../src/core/MotionController';
+import { canvasRenderer } from '../src/canvas';
 
 function setup() {
   const contexts: any[] = [];
@@ -35,7 +36,7 @@ function setup() {
   vi.stubGlobal('requestAnimationFrame', vi.fn(() => 1));
   vi.stubGlobal('cancelAnimationFrame', vi.fn());
   const sprite = { resetAudio: vi.fn(), setSampleRate: vi.fn(), pushPCM: vi.fn(), destroy: vi.fn() };
-  return { sprite, avatar: new Avatar(sprite as unknown as TalkingSprite), contexts, worklets, tracks, decode, capture };
+  return { sprite, avatar: new Avatar(sprite as unknown as MotionController), contexts, worklets, tracks, decode, capture };
 }
 
 describe('Avatar SDK', () => {
@@ -110,7 +111,7 @@ describe('Avatar SDK', () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 404 }));
     const context = { clearRect: vi.fn() };
     const canvas = { getContext: () => context } as unknown as HTMLCanvasElement;
-    await expect(createAvatar(canvas, { character: '/missing.json' })).rejects.toThrow('404');
+    await expect(createAvatar(canvas, { renderer: canvasRenderer({ character: '/missing.json' }) })).rejects.toThrow('404');
     expect(context.clearRect).toHaveBeenCalled();
   });
 

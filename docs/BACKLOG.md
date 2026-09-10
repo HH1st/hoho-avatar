@@ -7,7 +7,7 @@
 - add automatic reconnect and conversation restoration policies (manual retry starts a fresh session today);
 - replace the browser-to-gateway WebSocket with WebRTC when the Azure deployment supports the required server-side control pattern.
 
-Microphone capture has migrated to the shared 20 ms `AudioWorklet` in SDK source. The studio still pins `0.1.0-beta.1`; publish an updated SDK and update its dependency to deliver the migration there.
+Microphone capture has migrated to the shared 20 ms `AudioWorklet` in SDK source. The unified Studio imports local source and includes it.
 
 The browser SDK builds independently from the demo. SDK previews use the public npm `next` tag.
 
@@ -32,14 +32,12 @@ Release operations:
 
 Status: implemented for source development, the standalone demo and CI.
 
-The repository and `examples/basic/` commit separate public-registry lockfiles. CI installs them with `npm ci`; the demo pins the published SDK version and builds independently of SDK source.
+The repository and `examples/basic/` commit public-registry lockfiles. CI installs both with `npm ci`; the unified demo imports SDK source and the package-consumer tests independently verify tarball installs.
 
 ## Renderer expansion
 
-Status: roadmap, not current functionality.
+Status: an initial Three.js adapter and Blender character are implemented in source (unreleased).
 
-- define an engine-neutral motion-frame contract;
-- separate audio analysis from renderer lifecycle;
-- add adapter boundaries for richer 2D, Live2D, and 3D runtimes;
-- define capability discovery for blink, mouth, expression, pose, and viseme support;
-- add renderer-specific examples without coupling asset generation to one engine.
+- implemented: one Avatar API with explicit renderer implementations, shared RenderFrame, renderer-independent audio owner, Three.js GLB mouth/blink targets, target capability discovery, and one Studio with 2D/3D character selection;
+- implemented: original Blender source, reproducible export script, GLB and morph validation;
+- remaining: wider renderer adapters, skeletal poses/visemes, VRM, and SDK release and deployment of the unified Studio.

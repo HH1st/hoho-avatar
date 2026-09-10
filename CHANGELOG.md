@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- Define MouthState runtime constants, the derived type, ordered MOUTH_STATES and isMouthState once in core; share them across classification, both renderers, character validation and Studio previews.
+- Breaking source API: one renderer-neutral createAvatar/Avatar API with explicit canvasRenderer or threeRenderer injection. Remove renderer-specific avatar classes/factories; both implementations expose the same lifecycle, capabilities and view-control contract.
+- Share one MotionController for PCM analysis, mouth classification, blinking and animation scheduling across Canvas and Three.js.
+- Merge 2D and 3D into the same Studio, character picker and four audio providers, with lazy Three.js loading and a source-based Pages build.
+- Add an optional Three.js SDK entry with GLB morph-target animation, shared audio ownership, orbit controls and resource disposal.
+- Add Blender Mochi source and GLB, expression previews and model import to the Studio.
+
 ## 0.1.0-beta.2 — 2026-09-10
 
 - Move SDK microphone capture from `ScriptProcessorNode` to `AudioWorklet`, using 20 ms mono PCM batches and preserving muted monitoring and cancellation cleanup.

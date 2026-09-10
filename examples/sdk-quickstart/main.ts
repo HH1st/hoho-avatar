@@ -1,4 +1,5 @@
 import { createAvatar } from "@hh1st/hoho-avatar";
+import { canvasRenderer } from "@hh1st/hoho-avatar/canvas";
 import pixelBot from "@hh1st/hoho-avatar/characters/pixel-bot";
 
 const canvas = document.querySelector<HTMLCanvasElement>("#avatar")!;
@@ -9,7 +10,7 @@ let count = 0;
 
 async function main() {
   const avatar = await createAvatar(canvas, {
-    character: pixelBot,
+    renderer: canvasRenderer({ character: pixelBot }),
     onMotion: () => { frames.textContent = String(++count); },
   });
   status.textContent = "Ready";

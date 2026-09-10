@@ -14,23 +14,24 @@ _The redesigned Avatar Studio: a charcoal stage, coral accents, character cards,
 
 The project currently ships a browser-first TypeScript engine that analyzes streaming PCM audio, selects five mouth states, adds automatic blinking, and renders layered PNG characters with Canvas 2D. The demo accepts microphone input, a local audio file, locally generated English speech from KittenTTS, or an optional Azure Realtime voice-agent session. Local audio analysis, file decoding, and KittenTTS stay in the browser; Voice Agent mode explicitly sends microphone audio to the configured Azure OpenAI resource.
 
-Support for additional 2D, Live2D, and 3D renderers is a long-term direction, not a feature of the current release.
+An unreleased Three.js renderer and Blender-built 3D character are available in source: run `npm run dev` and select **Mochi (3D)** in the same Studio. See the [3D guide](docs/THREE.md). Live2D and other rendering engines remain roadmap items.
 
 ## Use the SDK
 
-**`@hh1st/hoho-avatar`** is a framework-independent SDK with ESM, TypeScript declarations, no runtime dependencies, and an included original Pixel Bot character. The current preview is `0.1.0-beta.2`, published under the `next` tag.
+**`@hh1st/hoho-avatar`** is a framework-independent SDK with ESM, TypeScript declarations, no runtime dependencies, and an included original Pixel Bot character. Published beta.1 uses the earlier API. The source API below is unreleased and uses explicit renderer selection; install a local tarball to try it.
 
 ```bash
 npm install @hh1st/hoho-avatar@next --registry=https://registry.npmjs.org
 ```
 
-To use an exact preview version, install `@hh1st/hoho-avatar@0.1.0-beta.2`. To build a local tarball from source, run `npm install` and `npm pack` in this repository, then install the generated `.tgz` in your application.
+To use the published earlier API, install `@hh1st/hoho-avatar@0.1.0-beta.1`. To build a local tarball from source, run `npm install` and `npm pack` in this repository, then install the generated `.tgz` in your application.
 
 ```ts
 import { createAvatar } from "@hh1st/hoho-avatar";
+import { canvasRenderer } from "@hh1st/hoho-avatar/canvas";
 import pixelBot from "@hh1st/hoho-avatar/characters/pixel-bot";
 
-const avatar = await createAvatar(canvas, { character: pixelBot });
+const avatar = await createAvatar(canvas, { renderer: canvasRenderer({ character: pixelBot }) });
 
 // Call from a click/tap handler.
 startButton.onclick = () => {
@@ -59,7 +60,7 @@ npm run dev
 
 Open the URL shown by Vite and press **Try a sample**. Everything runs locally in the browser.
 
-The studio is an independent npm application in `examples/basic/`. It installs the published `@hh1st/hoho-avatar@0.1.0-beta.1` with its own lockfile. Local development and GitHub Pages use that same dependency; neither builds nor imports the repository SDK source. The Pages job checks out only the example and shared `public/` assets.
+The single Studio in `examples/basic/` imports the checked-out SDK source. Select a 2D character or **Mochi (3D)** in the same character library; microphone, files, TTS and voice conversations share the same controls. Three.js is loaded only when selecting a 3D character. GitHub Pages builds this same Studio. The SDK quickstart remains an isolated package-consumer fixture.
 
 ## Built for voice agents
 
@@ -92,7 +93,7 @@ Select a character and press **Start microphone** for live input, **Try a sample
 
 ### Load a custom character
 
-The demo accepts a `.zip` containing one V1 character directory. Select **Import avatar** or drop the archive onto the avatar stage; the package is validated, unpacked, and rendered entirely inside the browser.
+The demo accepts a `.zip` containing one V1 2D character directory, or an embedded `.glb` 3D model. Select **Import avatar** or drop the archive onto the avatar stage; the package is validated, unpacked, and rendered entirely inside the browser.
 
 Imports are limited to 25 MB compressed, 75 MB of extracted character files, and 1,024 archive entries. Sizes are checked before and during extraction; duplicate asset paths are rejected.
 
@@ -110,80 +111,38 @@ Characters produced by the bundled [asset-generation Skill](https://github.com/H
 
 Use the SDK package for integration. The browser studio and optional Azure gateway remain runnable from source; they are not included in the SDK package.
 
-## Low-level engine usage
+## One Avatar API, renderer implementations
 
-The package also exports the existing engine primitives for custom integrations. `TalkingSprite` accepts a canvas, character definition and PCM sample rate:
+The package root contains the renderer-neutral createAvatar, Avatar, MotionController and audio tools. Canvas and Three.js implement the same AvatarRenderer contract and are selected explicitly:
 
 ```ts
-import { TalkingSprite } from "@hh1st/hoho-avatar";
+import { createAvatar } from '@hh1st/hoho-avatar';
+import { canvasRenderer } from '@hh1st/hoho-avatar/canvas';
+// For 3D, import { threeRenderer } from '@hh1st/hoho-avatar/three';
 
-const canvas = document.querySelector<HTMLCanvasElement>("#avatar")!;
-
-const sprite = new TalkingSprite(canvas, {
-  character: "/characters/niu-lai/character.json",
+const avatar = await createAvatar(canvas, {
+  renderer: canvasRenderer({ character: '/characters/pixel-bot/character.json' }),
+  // Or: renderer: threeRenderer({ model: '/models/mochi/mochi.glb' }),
   sampleRate: 48_000,
 });
-
-await sprite.ready;
-sprite.start();
-
-// Push mono PCM chunks as they become available.
-sprite.pushPCM(float32Chunk);
+avatar.pushPCM(float32Chunk);
+const unsubscribe = avatar.onMotion(frame => console.log(frame.mouth));
+// await avatar.startMicrophone();
+// await avatar.playAudio(fileOrUrl);
+// avatar.stopAudio();
+// unsubscribe(); await avatar.destroy();
 ```
 
-Subscribe to classified motion frames when the surrounding UI needs the current mouth state or energy level:
+Both implementations return the same Avatar. Read capabilities for supported expressions and view controls. The core has no renderer dependency; Canvas consumers do not install Three.js. The Three.js implementation requires the optional three peer. See [the SDK guide](docs/SDK.md) for the interface and [the Blender/Three.js guide](docs/THREE.md) for GLB authoring.
 
-```ts
-const unsubscribe = sprite.onMotion((frame) => {
-  console.log(frame.mouth, frame.energy, frame.speaking);
-});
+MotionController consumes mono PCM and produces RenderFrame, including mouth/energy, blink, interaction state and timing. Renderers draw those frames and manage their own assets/GPU resources. Audio acquisition and playback remain separate; match the processing sample rate when supplying external PCM.
 
-// Later:
-unsubscribe();
-sprite.destroy();
-```
-
-### Drive a sprite from a local audio file
-
-`AudioClipPlayer` decodes a complete browser-supported audio file, plays it through Web Audio, and emits mono `Float32Array` PCM chunks for `TalkingSprite`:
-
-```ts
-import { AudioClipPlayer, TalkingSprite } from "@hh1st/hoho-avatar";
-
-const canvas = document.querySelector<HTMLCanvasElement>("#avatar")!;
-const file = document.querySelector<HTMLInputElement>("#audioFile")!.files![0]!;
-let sprite: TalkingSprite | undefined;
-
-const player = new AudioClipPlayer({
-  onPCM: (chunk) => sprite?.pushPCM(chunk),
-  onEnded: () => sprite?.resetAudio(),
-});
-
-const metadata = await player.load(file);
-sprite = new TalkingSprite(canvas, {
-  character: "/characters/niu-lai/character.json",
-  sampleRate: metadata.sampleRate,
-});
-
-await sprite.ready;
-sprite.start();
-await player.play();
-
-// Later:
-player.stop();
-sprite.resetAudio();
-await player.destroy();
-sprite.destroy();
-```
-
-`metadata.sampleRate` is the Web Audio processing rate used by the emitted PCM, so pass it to `TalkingSprite`. Browsers automatically resample source files such as 16 kHz or 24 kHz audio to the `AudioContext` rate. Supported file containers and codecs depend on the browser.
-
-### Drive a sprite from streaming TTS text
+### Drive an avatar from streaming TTS text
 
 `StreamingTTSPlayer` accepts complete text or text deltas, groups them into short speakable phrases, starts playback as soon as the first phrase is ready, synthesizes later phrases while audio is playing, and sends playback PCM through the same avatar input. Supply any synthesizer that returns a browser-decodable audio `Blob`:
 
 ```ts
-import { StreamingTTSPlayer, TalkingSprite } from "@hh1st/hoho-avatar";
+import { StreamingTTSPlayer } from "@hh1st/hoho-avatar";
 import { textToSpeech } from "kitten-tts-webgpu";
 
 const tts = new StreamingTTSPlayer({
@@ -194,7 +153,7 @@ const tts = new StreamingTTSPlayer({
     onProgress: options.onProgress,
   }),
   voice: "Bella",
-  onPCM: (chunk) => sprite.pushPCM(chunk),
+  onPCM: (chunk) => avatar.pushPCM(chunk),
 });
 
 // Call prepare() from a click/tap to unlock Web Audio.
@@ -242,7 +201,7 @@ The package entry point exports:
 - `createAvatar`, `Avatar` and `AvatarOptions`
 - `MicrophoneInput`
 
-- `TalkingSprite`
+- `MotionController`, `AvatarRenderer` and `RendererFactory`
 - `PCMAnalyzer`
 - `MouthClassifier`
 - `AudioClipPlayer`
@@ -342,7 +301,7 @@ Image generation also requires an ImageGen capability when a character body does
 
 ```bash
 npm run setup:demo # Install the demo dependencies from its lockfile
-npm run dev        # Start the demo using the published SDK
+npm run dev        # Start the unified 2D/3D Studio from source
 npm run typecheck  # Type-check source, examples, and tests
 npm test           # Run deterministic engine and audio-player tests
 npm run build      # Build the demo into examples/basic/dist
@@ -366,7 +325,7 @@ src/
 ├── animation/   # Blink timing
 ├── audio/       # PCM feature extraction and mouth classification
 ├── audio-source/ # Local-file playback and AudioWorklet PCM output
-├── core/        # TalkingSprite API and public types
+├── core/        # Avatar API, renderer contracts and shared motion
 └── renderer/    # Asset loading and Canvas composition
 
 examples/basic/  # Browser microphone demo
@@ -396,7 +355,7 @@ microphone / audio file / TTS
         mono Float32 PCM
               |
               v
- PCMAnalyzer -> MouthClassifier -> TalkingSprite -> SpriteRenderer
+ PCMAnalyzer -> MouthClassifier -> MotionController -> AvatarRenderer (Canvas / Three.js)
                                       |
                                BlinkController
 ```
@@ -424,7 +383,7 @@ Current release:
 
 The current engine is not phoneme-level lip sync, a skeletal animation system, or a general-purpose audio recording library.
 
-Longer term, Hoho Avatar aims to expose shared audio-driven motion data to multiple renderer adapters, including richer 2D, Live2D, and 3D integrations. Those adapters are not yet implemented.
+The source includes a Three.js adapter consuming shared audio-driven motion, with GLB mouth and blink targets. Richer 2D, Live2D, skeletal retargeting and other renderer integrations remain future work.
 
 SDK packaging and consumer validation are implemented. Preview releases use the public npm `next` tag; see [release instructions](https://github.com/HH1st/hoho-avatar/blob/main/docs/RELEASING.md) and [remaining work](https://github.com/HH1st/hoho-avatar/blob/main/docs/BACKLOG.md).
 

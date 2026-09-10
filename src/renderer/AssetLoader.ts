@@ -1,5 +1,6 @@
 import { parseCharacterDefinition } from "../core/CharacterDefinition";
 import type { CharacterDefinition, MouthState } from "../core/types";
+import { MOUTH_STATES } from '../core/MouthState';
 
 export interface LoadedCharacter {
   definition: CharacterDefinition;
@@ -8,20 +9,25 @@ export interface LoadedCharacter {
   eyes?: Record<"open" | "closed", HTMLImageElement>;
 }
 
-const loadImage = (src: string): Promise<HTMLImageElement> => new Promise((resolve, reject) => {
+const loadImage = (src: string, signal?: AbortSignal): Promise<HTMLImageElement> => new Promise((resolve, reject) => {
+  signal?.throwIfAborted();
   const image = new Image();
-  image.onload = () => resolve(image);
-  image.onerror = () => reject(new Error(`Unable to load sprite: ${src}`));
+  const cleanup = () => { image.onload = null; image.onerror = null; signal?.removeEventListener('abort', abort); };
+  const abort = () => { cleanup(); reject(signal?.reason); };
+  signal?.addEventListener('abort', abort, { once: true });
+  image.onload = () => { cleanup(); resolve(image); };
+  image.onerror = () => { cleanup(); reject(new Error(`Unable to load sprite: ${src}`)); };
   image.src = src;
 });
 
-export async function loadCharacter(source: string | CharacterDefinition): Promise<LoadedCharacter> {
+export async function loadCharacter(source: string | CharacterDefinition, signal?: AbortSignal): Promise<LoadedCharacter> {
+  signal?.throwIfAborted();
   let definition: CharacterDefinition;
   let baseUrl = document.baseURI;
 
   if (typeof source === "string") {
     const configUrl = new URL(source, document.baseURI);
-    const response = await fetch(configUrl);
+    const response = await fetch(configUrl, { signal });
     if (!response.ok) throw new Error(`Unable to load character: ${response.status}`);
     definition = parseCharacterDefinition(await response.json());
     baseUrl = configUrl.href;
@@ -31,13 +37,13 @@ export async function loadCharacter(source: string | CharacterDefinition): Promi
 
   const resolve = (path: string) => new URL(path, baseUrl).href;
   const mouthPromise = Promise.all(
-    Object.entries(definition.mouth.sprites).map(async ([key, path]) => [key, await loadImage(resolve(path))] as const),
+    MOUTH_STATES.map(async (state) => [state, await loadImage(resolve(definition.mouth.sprites[state]), signal)] as const),
   );
   const eyesPromise = definition.eyes
-    ? Promise.all(Object.entries(definition.eyes.sprites).map(async ([key, path]) => [key, await loadImage(resolve(path))] as const))
+    ? Promise.all(Object.entries(definition.eyes.sprites).map(async ([key, path]) => [key, await loadImage(resolve(path), signal)] as const))
     : undefined;
   const [body, mouthEntries, eyeEntries] = await Promise.all([
-    loadImage(resolve(definition.body.src)),
+    loadImage(resolve(definition.body.src), signal),
     mouthPromise,
     eyesPromise,
   ]);

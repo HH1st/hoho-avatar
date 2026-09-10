@@ -12,6 +12,12 @@ The project maintainer has chosen to distribute `pixel-bot` and `pixel-portrait`
 
 Contributors adding an example character must own the artwork or have explicit redistribution rights. Document its source and license in this file. Do not commit private reference images, temporary generations, or assets whose redistribution terms are unclear.
 
+## Mochi 3D character
+
+`assets/blender/mochi.blend` and `public/models/mochi/mochi.glb` are original project artwork modeled in Blender with `scripts/blender/create_mochi.py`, using mesh geometry and procedural materials only. They are distributed under the repository MIT license. The GLB includes mouth and blink morph targets. The Blender source and demo model are excluded from the SDK npm package.
+
+The 3D Studio uses Three.js under its MIT license, retained at `public/licenses/three-MIT.txt` and copied into its production build. Blender is an authoring tool and is not bundled into the SDK or site.
+
 ## KittenTTS phonemizer data
 
 `public/espeak-en-dict.tsv` and `public/en_rules` are copied from the

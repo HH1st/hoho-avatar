@@ -1,4 +1,5 @@
-export type MouthState = "closed" | "small" | "large" | "wide" | "round";
+import type { MouthState } from './MouthState';
+export type { MouthState } from './MouthState';
 export type CharacterState = "idle" | "listening" | "thinking" | "speaking";
 
 export interface MotionFrame {
@@ -31,12 +32,6 @@ export interface CharacterDefinition {
   animation?: {
     bodyBouncePx?: number;
   };
-}
-
-export interface TalkingSpriteOptions {
-  character: string | CharacterDefinition;
-  sampleRate: number;
-  channels?: 1;
 }
 
 export interface AudioFeatures {

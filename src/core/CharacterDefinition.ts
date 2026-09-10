@@ -1,6 +1,5 @@
-import type { CharacterDefinition, MouthState, SpritePlacement } from "./types";
-
-const mouthStates: readonly MouthState[] = ["closed", "small", "large", "wide", "round"];
+import type { CharacterDefinition, SpritePlacement } from "./types";
+import { MOUTH_STATES } from './MouthState';
 
 const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === "object" && value !== null;
 const isFiniteNumber = (value: unknown): value is number => typeof value === "number" && Number.isFinite(value);
@@ -33,7 +32,7 @@ export function parseCharacterDefinition(value: unknown): CharacterDefinition {
   if (!isRecord(value.mouth)) throw new Error("character.json is missing mouth settings.");
   requirePoint(value.mouth.anchor, "mouth.anchor");
   if (!isRecord(value.mouth.sprites)) throw new Error("character.json is missing mouth sprites.");
-  for (const state of mouthStates) {
+  for (const state of MOUTH_STATES) {
     if (!isNonEmptyString(value.mouth.sprites[state])) throw new Error(`character.json is missing mouth sprite: ${state}.`);
   }
   if (value.eyes !== undefined) {
@@ -52,4 +51,3 @@ export function parseCharacterDefinition(value: unknown): CharacterDefinition {
   }
   return value as unknown as CharacterDefinition;
 }
-

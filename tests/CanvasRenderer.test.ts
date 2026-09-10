@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { TalkingSprite } from "../src/core/TalkingSprite";
+import { CanvasRenderer } from "../src/canvas";
+import { MotionController } from "../src/core/MotionController";
 import type { CharacterDefinition } from "../src/core/types";
 
 const character: CharacterDefinition = {
@@ -18,7 +19,7 @@ const character: CharacterDefinition = {
   },
 };
 
-describe("TalkingSprite", () => {
+describe("Canvas renderer", () => {
   afterEach(() => vi.unstubAllGlobals());
 
   it("changes PCM rate without reloading images and resets the previous motion", async () => {
@@ -32,7 +33,7 @@ describe("TalkingSprite", () => {
     vi.stubGlobal("document", { baseURI: "https://example.test/" });
     const context = { clearRect: vi.fn(), drawImage: vi.fn(), imageSmoothingEnabled: true };
     const canvas = { getContext: () => context } as unknown as HTMLCanvasElement;
-    const sprite = new TalkingSprite(canvas, { character, sampleRate: 48000 });
+    const sprite = new MotionController(new CanvasRenderer(canvas, { character }), 48000);
     await sprite.ready;
     const onMotion = vi.fn();
     sprite.onMotion(onMotion);
@@ -59,11 +60,12 @@ describe("TalkingSprite", () => {
 
     const context = { clearRect: vi.fn(), drawImage: vi.fn(), imageSmoothingEnabled: true };
     const canvas = { width: 0, height: 0, getContext: vi.fn(() => context) } as unknown as HTMLCanvasElement;
-    const sprite = new TalkingSprite(canvas, { character, sampleRate: 48_000 });
+    const sprite = new MotionController(new CanvasRenderer(canvas, { character }), 48_000);
 
+    const rejected = expect(sprite.ready).rejects.toMatchObject({ name: "AbortError" });
     sprite.destroy();
     for (const image of images) image.onload?.();
-    await sprite.ready;
+    await rejected;
 
     expect(canvas.width).toBe(0);
     expect(canvas.height).toBe(0);

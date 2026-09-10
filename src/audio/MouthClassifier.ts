@@ -1,4 +1,5 @@
-import type { AudioFeatures, MotionFrame, MouthState } from "../core/types";
+import type { AudioFeatures, MotionFrame } from "../core/types";
+import { MouthState } from '../core/MouthState';
 
 export interface MouthClassifierOptions {
   silenceThreshold?: number;
@@ -11,7 +12,7 @@ export interface MouthClassifierOptions {
 
 export class MouthClassifier {
   private readonly options: Required<MouthClassifierOptions>;
-  private current: MouthState = "closed";
+  private current: MouthState = MouthState.Closed;
   private lastChange = -Infinity;
   private silenceSince: number | null = null;
 
@@ -30,7 +31,7 @@ export class MouthClassifier {
     const { timestamp, rms } = features;
     let next = this.rawState(features);
 
-    if (next === "closed") {
+    if (next === MouthState.Closed) {
       this.silenceSince ??= timestamp;
       if (timestamp - this.silenceSince < this.options.silenceDelayMs) next = this.current;
     } else {
@@ -44,24 +45,24 @@ export class MouthClassifier {
 
     return {
       timestamp,
-      speaking: this.current !== "closed",
+      speaking: this.current !== MouthState.Closed,
       energy: Math.max(0, Math.min(1, rms / 0.28)),
       mouth: this.current,
     };
   }
 
   reset(timestamp = performance.now()): MotionFrame {
-    this.current = "closed";
+    this.current = MouthState.Closed;
     this.lastChange = timestamp;
     this.silenceSince = null;
-    return { timestamp, speaking: false, energy: 0, mouth: "closed" };
+    return { timestamp, speaking: false, energy: 0, mouth: MouthState.Closed };
   }
 
   private rawState(features: AudioFeatures): MouthState {
-    if (features.rms < this.options.silenceThreshold) return "closed";
-    if (features.rms > this.options.loudThreshold) return "large";
-    if (features.spectralCentroid > this.options.highFrequencyThreshold) return "wide";
-    if (features.lowBandRatio > this.options.roundThreshold) return "round";
-    return "small";
+    if (features.rms < this.options.silenceThreshold) return MouthState.Closed;
+    if (features.rms > this.options.loudThreshold) return MouthState.Large;
+    if (features.spectralCentroid > this.options.highFrequencyThreshold) return MouthState.Wide;
+    if (features.lowBandRatio > this.options.roundThreshold) return MouthState.Round;
+    return MouthState.Small;
   }
 }

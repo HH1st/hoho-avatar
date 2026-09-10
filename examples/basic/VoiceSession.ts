@@ -1,5 +1,5 @@
-import { MicrophoneInput, StreamingPCMPlayer, VuiClient } from "@hh1st/hoho-avatar";
-import type { VuiSessionOptions } from "@hh1st/hoho-avatar";
+import { MicrophoneInput, StreamingPCMPlayer, VuiClient } from "../../src";
+import type { VuiSessionOptions } from "../../src";
 
 export type VoiceSessionState = "disconnected" | "connecting" | "listening" | "thinking" | "speaking" | "stopping" | "error";
 

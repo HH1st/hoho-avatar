@@ -1,13 +1,12 @@
 import { strFromU8, unzipSync, Unzip, UnzipInflate } from "fflate";
-import { parseCharacterDefinition } from "@hh1st/hoho-avatar";
-import type { CharacterDefinition, MouthState } from "@hh1st/hoho-avatar";
+import { parseCharacterDefinition, MOUTH_STATES } from "../../src";
+import type { CharacterDefinition, MouthState } from "../../src";
 
 const MAX_ZIP_BYTES = 25 * 1024 * 1024;
 const MAX_EXTRACTED_BYTES = 75 * 1024 * 1024;
 const MAX_ZIP_ENTRIES = 1024;
 // Bound each inflate call, even if the archive lies about uncompressed sizes.
 const ZIP_CHUNK_BYTES = 1024;
-const mouthStates: MouthState[] = ["closed", "small", "large", "wide", "round"];
 
 class CharacterArchiveError extends Error {}
 
@@ -168,7 +167,7 @@ export async function loadCharacterPackage(file: PackageFile, objectUrls: Object
       body: { ...definition.body, src: createAssetUrl(definition.body.src) },
       mouth: {
         ...definition.mouth,
-        sprites: Object.fromEntries(mouthStates.map((state) => [state, createAssetUrl(definition.mouth.sprites[state])])) as Record<MouthState, string>,
+        sprites: Object.fromEntries(MOUTH_STATES.map((state) => [state, createAssetUrl(definition.mouth.sprites[state])])) as Record<MouthState, string>,
       },
       eyes: definition.eyes
         ? {
