@@ -5,6 +5,7 @@ export default async function setup() {
   const previous = process.env.VITE_VOICE_AGENT_URL;
   process.env.VITE_VOICE_AGENT_URL = "";
   const server = await createServer({
+    configFile: "examples/basic/vite.config.mjs",
     mode: "e2e",
     server: { host: "127.0.0.1", port: 5193, strictPort: true },
   });

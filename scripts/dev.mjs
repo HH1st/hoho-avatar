@@ -41,7 +41,7 @@ try {
     if (!ready) throw new Error('Voice gateway did not become healthy. Check .env and the log above.');
   }
   if (!stopping) {
-    frontend = await createServer({ server: { host: '127.0.0.1', port: Number(process.env.PORT || 5173), strictPort: true } });
+    frontend = await createServer({ configFile: 'examples/basic/vite.config.mjs', server: { host: '127.0.0.1', port: Number(process.env.PORT || 5173), strictPort: true } });
     await frontend.listen();
     frontend.printUrls();
   }

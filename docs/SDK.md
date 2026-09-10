@@ -100,6 +100,8 @@ Do not construct the avatar during server rendering. Importing the package on th
 
 ## Validation and release
 
-`npm run build` builds the demo into `dist/`; `npm run build:sdk` builds only the SDK into `dist-sdk/`. `npm pack` builds the SDK automatically.
+The main studio in `examples/basic/` is an independent npm application with its own package manifest and lockfile. It installs `@hh1st/hoho-avatar@0.1.0-beta.1` from the public npm registry, and imports only the installed package. The quickstart also installs a versioned package from npm.
+
+Run `npm run setup:demo` after installing repository dependencies. `npm run dev`, `npm run dev:all`, and `npm run build` use the installed SDK; the demo output is `examples/basic/dist/`. The GitHub Pages job checks out only `examples/basic/` and `public/`, installs the same lockfile, and builds without SDK source. Changes to `src/` affect the demo only after publishing a new SDK version and updating the demo dependency and lockfile. `npm run build:sdk` and `npm pack` remain separate SDK development commands.
 
 `npm run test:package` builds and inspects the tarball, installs it into a fresh consumer, checks NodeNext types and server-side import, then runs native ESM and Vite production browser checks for character loading, audio-worklet PCM, microphone capture and disposal. See [RELEASING.md](https://github.com/HH1st/hoho-avatar/blob/main/docs/RELEASING.md) before publishing.

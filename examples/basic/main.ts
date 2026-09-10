@@ -1,7 +1,6 @@
-import { AudioClipPlayer, StreamingTTSPlayer, TalkingSprite } from "../../src";
-import type { AudioClipMetadata, CharacterDefinition, CharacterState } from "../../src";
+import { AudioClipPlayer, MicrophoneInput, StreamingTTSPlayer, TalkingSprite } from "@hh1st/hoho-avatar";
+import type { AudioClipMetadata, CharacterDefinition, CharacterState } from "@hh1st/hoho-avatar";
 import { loadCharacterPackage, type LoadedCharacterPackage } from "./characterPackage";
-import { MicrophoneInput } from "./MicrophoneInput";
 import { VoiceSession, type VoiceSessionState } from "./VoiceSession";
 import "./style.css";
 

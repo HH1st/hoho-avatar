@@ -21,9 +21,10 @@
     "typescript"
   ],
   "scripts": {
-    "dev": "vite",
+    "setup:demo": "npm --prefix examples/basic ci --registry=https://registry.npmjs.org",
+    "dev": "npm --prefix examples/basic run dev --",
     "dev:voice-agent": "node --env-file-if-exists=.env server/voice-agent-gateway.mjs",
-    "build": "vite build",
+    "build": "npm --prefix examples/basic run build",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "dev:all": "node scripts/dev.mjs",

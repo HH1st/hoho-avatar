@@ -17,7 +17,7 @@ Implemented:
 - `@hh1st/hoho-avatar` ESM, declarations, source maps and an explicit exports/files contract;
 - `createAvatar()` for microphone, local files and external PCM;
 - original MIT Pixel Bot assets, with no Azure or KittenTTS runtime dependencies;
-- separate `dist-sdk/` and demo `dist/` output;
+- separate `dist-sdk/` and demo `examples/basic/dist/` output;
 - clean tarball installation with native browser and Vite production verification;
 - tag-driven trusted-publishing workflow, changelog and release guidance.
 
@@ -29,9 +29,9 @@ Release operations:
 
 ## Dependency reproducibility
 
-Status: implemented for source development and CI. Revisit release snapshots when package publishing begins.
+Status: implemented for source development, the standalone demo and CI.
 
-The repository commits a public-registry `package-lock.json`, and CI installs it with `npm ci` so builds resolve an auditable, reproducible dependency graph without internal registry URLs.
+The repository and `examples/basic/` commit separate public-registry lockfiles. CI installs them with `npm ci`; the demo pins the published SDK version and builds independently of SDK source.
 
 ## Renderer expansion
 

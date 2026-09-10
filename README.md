@@ -53,10 +53,13 @@ Requirements: Node.js 20.19 or newer and npm.
 git clone https://github.com/HH1st/hoho-avatar.git
 cd hoho-avatar
 npm install
+npm run setup:demo
 npm run dev
 ```
 
 Open the URL shown by Vite and press **Try a sample**. Everything runs locally in the browser.
+
+The studio is an independent npm application in `examples/basic/`. It installs the published `@hh1st/hoho-avatar@0.1.0-beta.1` with its own lockfile. Local development and GitHub Pages use that same dependency; neither builds nor imports the repository SDK source. The Pages job checks out only the example and shared `public/` assets.
 
 ## Built for voice agents
 
@@ -338,10 +341,11 @@ Image generation also requires an ImageGen capability when a character body does
 ## Development
 
 ```bash
-npm run dev        # Start the browser demo from source
+npm run setup:demo # Install the demo dependencies from its lockfile
+npm run dev        # Start the demo using the published SDK
 npm run typecheck  # Type-check source, examples, and tests
 npm test           # Run deterministic engine and audio-player tests
-npm run build      # Build the browser demo
+npm run build      # Build the demo into examples/basic/dist
 npm run build:sdk  # Build SDK ESM, declarations and assets
 npm run test:package # Install and test the SDK tarball in an independent app
 ```

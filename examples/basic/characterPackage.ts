@@ -1,6 +1,6 @@
 import { strFromU8, unzipSync, Unzip, UnzipInflate } from "fflate";
-import { parseCharacterDefinition } from "../../src";
-import type { CharacterDefinition, MouthState } from "../../src";
+import { parseCharacterDefinition } from "@hh1st/hoho-avatar";
+import type { CharacterDefinition, MouthState } from "@hh1st/hoho-avatar";
 
 const MAX_ZIP_BYTES = 25 * 1024 * 1024;
 const MAX_EXTRACTED_BYTES = 75 * 1024 * 1024;
