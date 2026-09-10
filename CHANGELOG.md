@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Add a warm Morning appearance alongside Night, with a persistent theme switch and shareable theme URLs.
 - Run Avatar Studio as an independent npm application using the published SDK and its own lockfile.
 - Build GitHub Pages from the example and shared demo assets without checking out SDK source.
 - Add separate demo setup instructions and document local SDK package testing.

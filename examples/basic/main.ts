@@ -3,6 +3,8 @@ import type { AudioClipMetadata, CharacterDefinition, CharacterState } from "@hh
 import { loadCharacterPackage, type LoadedCharacterPackage } from "./characterPackage";
 import { VoiceSession, type VoiceSessionState } from "./VoiceSession";
 import "./style.css";
+import "./morning.css";
+import "./theme";
 
 // Mobile browser chrome and the software keyboard change the usable viewport.
 // Size the same live canvas to leave room for controls and text entry.

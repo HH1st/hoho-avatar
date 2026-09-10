@@ -1,9 +1,24 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="night">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#101012" />
+    <style>html { background: #101012; } html[data-theme="morning"] { background: #faf7f0; }</style>
+    <script>
+      // Resolve the palette before the first paint, even when storage is unavailable.
+      (() => {
+        const requested = new URLSearchParams(location.search).get("theme");
+        let saved;
+        try { saved = localStorage.getItem("hoho-studio-theme"); } catch {}
+        const valid = (value) => value === "morning" || value === "night";
+        const theme = valid(requested) ? requested : valid(saved) ? saved
+          : matchMedia("(prefers-color-scheme: dark)").matches ? "night" : "morning";
+        document.documentElement.dataset.theme = theme;
+        document.documentElement.style.colorScheme = theme === "morning" ? "light" : "dark";
+        document.querySelector('meta[name="theme-color"]').content = theme === "morning" ? "#faf7f0" : "#101012";
+      })();
+    </script>
     <meta name="description" content="Your voice. A presence. An expressive studio for audio-reactive avatars." />
     <title>Hoho — Avatar Studio</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -23,6 +38,8 @@
       <symbol id="i-chevron" viewBox="0 0 24 24"><path d="m9 5 7 7-7 7"/></symbol>
       <symbol id="i-external" viewBox="0 0 24 24"><path d="M7 17 17 7M7 7h10v10"/></symbol>
       <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 4 4 10-10"/></symbol>
+      <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5"/></symbol>
+      <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20.5 14A8.5 8.5 0 0 1 10 3.5 8.5 8.5 0 1 0 20.5 14Z"/></symbol>
     </svg>
     <div class="app-shell">
       <header class="topbar">
@@ -34,10 +51,16 @@
           <a class="nav-active" href="./" aria-current="page">Studio</a>
           <a href="https://github.com/HH1st/hoho-avatar#readme" target="_blank" rel="noreferrer">Documentation <svg class="icon"><use href="#i-external"/></svg></a>
         </nav>
-        <a class="github-link" href="https://github.com/HH1st/hoho-avatar" target="_blank" rel="noreferrer">
+        <div class="topbar-actions">
+          <div class="theme-switch" role="group" aria-label="Studio appearance">
+            <button class="theme-option" data-theme-option="morning" type="button" aria-pressed="false" aria-label="Light theme"><svg class="icon" aria-hidden="true"><use href="#i-sun"/></svg></button>
+            <button class="theme-option" data-theme-option="night" type="button" aria-pressed="true" aria-label="Dark theme"><svg class="icon" aria-hidden="true"><use href="#i-moon"/></svg></button>
+          </div>
+        <a class="github-link" href="https://github.com/HH1st/hoho-avatar" target="_blank" rel="noreferrer" aria-label="GitHub repository">
           <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 19c-4 1-4-2-6-2m12 5v-4a3 3 0 0 0-1-2c4 0 7-2 7-6a5 5 0 0 0-1-3c0-1 0-3-1-4-2 0-3 1-4 2a15 15 0 0 0-6 0C8 4 7 3 5 3 4 4 4 6 4 7a5 5 0 0 0-1 3c0 4 3 6 7 6a3 3 0 0 0-1 2v4"/></svg>
           <span>GitHub</span><svg class="icon external"><use href="#i-external"/></svg>
         </a>
+        </div>
       </header>
 
       <main id="studio">
@@ -87,7 +110,7 @@
               <div class="provider-body">
                 <div id="panel-mic" class="provider-panel active" data-provider-panel="mic" role="tabpanel" aria-labelledby="tab-mic">
                   <div class="mic-illustration" aria-hidden="true"><span></span><span></span><span></span><div><svg class="icon"><use href="#i-mic"/></svg></div><span></span><span></span><span></span></div>
-                  <h3>The mic is yours.</h3><p>A story. A late-night thought. <br />Whatever it is, give it a voice.</p>
+                  <h3>The mic is yours.</h3><p>A story. A passing thought. <br />Whatever it is, give it a voice.</p>
                   <button id="micButton" class="button primary" type="button"><svg class="icon"><use href="#i-mic"/></svg><span id="buttonLabel">Start microphone</span><svg class="icon button-arrow"><use href="#i-arrow"/></svg></button>
                   <span class="action-note">You choose when to start and stop.</span>
                 </div>
