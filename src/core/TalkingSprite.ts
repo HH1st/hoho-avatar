@@ -7,7 +7,7 @@ import type { CharacterState, MotionFrame, TalkingSpriteOptions } from "./types"
 
 export class TalkingSprite {
   readonly ready: Promise<void>;
-  private readonly analyzer: PCMAnalyzer;
+  private analyzer: PCMAnalyzer;
   private readonly classifier = new MouthClassifier();
   private readonly blink = new BlinkController();
   private renderer?: SpriteRenderer;
@@ -52,6 +52,15 @@ export class TalkingSprite {
 
   resetAudio(): void {
     this.assertActive();
+    this.resetMotion();
+  }
+
+  /** Match a PCM source without reloading the character images. */
+  setSampleRate(sampleRate: number): void {
+    this.assertActive();
+    if (!Number.isFinite(sampleRate) || sampleRate <= 0) throw new Error("sampleRate must be a positive finite number");
+    if (this.analyzer.sampleRate === sampleRate) return;
+    this.analyzer = new PCMAnalyzer({ sampleRate });
     this.resetMotion();
   }
 

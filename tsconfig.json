@@ -10,5 +10,5 @@
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "types": ["vitest/globals", "vite/client"]
   },
-  "include": ["src", "examples", "tests", "vite.config.ts"]
+  "include": ["src", "examples/basic", "tests", "vite.config.ts"]
 }

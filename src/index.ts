@@ -18,4 +18,9 @@ export type {
   TTSSynthesizer,
   TTSSynthesisOptions,
 } from "./audio-source/StreamingTTSPlayer";
-export type { AudioFeatures, CharacterDefinition, CharacterState, MotionFrame, MouthState, TalkingSpriteOptions } from "./core/types";
+export type { AudioFeatures, CharacterDefinition, CharacterState, MotionFrame, MouthState, SpritePlacement, TalkingSpriteOptions } from "./core/types";
+export { Avatar, createAvatar } from "./core/Avatar";
+export type { AvatarOptions } from "./core/Avatar";
+export { MicrophoneInput } from "./audio-source/MicrophoneInput";
+export type { PCMAnalyzerOptions } from "./audio/PCMAnalyzer";
+export type { MouthClassifierOptions } from "./audio/MouthClassifier";

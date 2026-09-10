@@ -1,0 +1,15 @@
+<!doctype html>
+<html lang="en">
+  <head><meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" /><title>Hoho SDK quickstart</title></head>
+  <body>
+    <h1>Hoho Avatar SDK</h1>
+    <canvas id="avatar" width="512" height="512" style="width: min(320px, 100%); image-rendering: pixelated;"></canvas>
+    <p id="status" role="status">Loading character…</p>
+    <p>Motion frames: <output id="frames">0</output></p>
+    <button id="mic" disabled>Start microphone</button>
+    <button id="play" disabled>Play sample</button>
+    <button id="stop" disabled>Stop audio</button>
+    <button id="destroy" disabled>Destroy</button>
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>

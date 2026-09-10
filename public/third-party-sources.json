@@ -1,0 +1,58 @@
+{
+  "scope": "Third-party components distributed with the browser demo. These dependencies and data are not included in the SDK tarball.",
+  "components": [
+    {
+      "name": "fflate",
+      "version": "0.8.2",
+      "license": "MIT",
+      "licenseFile": "licenses/fflate-MIT.txt",
+      "copyright": "Copyright (c) 2026 Arjun Barrett",
+      "source": "https://github.com/101arrowz/fflate/tree/d3243651cb142e3e04f3e4bc037b9e985878f444",
+      "sourceArchive": "https://codeload.github.com/101arrowz/fflate/tar.gz/d3243651cb142e3e04f3e4bc037b9e985878f444",
+      "modifications": "Used from the published npm package; bundled/minified by Vite."
+    },
+    {
+      "name": "kitten-tts-webgpu",
+      "version": "0.1.1",
+      "license": "MIT (wrapper/engine; separate terms apply to eSpeak components and data)",
+      "licenseFile": "licenses/kitten-tts-webgpu-MIT.txt",
+      "copyright": "Copyright (c) 2026 svenflow",
+      "source": "https://github.com/svenflow/kitten-tts-webgpu/tree/1e65d24b54ef9f5538b130c41ce0185abdccf630",
+      "sourceArchive": "https://codeload.github.com/svenflow/kitten-tts-webgpu/tar.gz/1e65d24b54ef9f5538b130c41ce0185abdccf630",
+      "modifications": "Used from the published npm package; bundled/minified by Vite. Dictionary and rules are served separately."
+    },
+    {
+      "name": "phonemizer",
+      "version": "1.2.1",
+      "license": "Apache-2.0 (JavaScript wrapper); eSpeak NG has separate GPL terms",
+      "licenseFile": "licenses/phonemizer-Apache-2.0.txt",
+      "attribution": "Phonemizer.js by Xenova",
+      "source": "https://github.com/xenova/phonemizer.js/tree/6835144b7ee9043129222549c1ed2f6a27216278",
+      "sourceArchive": "https://codeload.github.com/xenova/phonemizer.js/tar.gz/6835144b7ee9043129222549c1ed2f6a27216278",
+      "modifications": "Included by the KittenTTS distribution. No local edits to the upstream wrapper."
+    },
+    {
+      "name": "eSpeak NG dictionary, rules and phonemizer backend",
+      "license": "GPL-3.0; en_rules explicitly permits GPL-3.0-or-later",
+      "licenseFile": "licenses/GPL-3.0.txt",
+      "copyright": [
+        "Copyright (C) 2005 to 2014 Jonathan Duddington",
+        "Copyright (C) 2016-2017 Reece H. Dunn",
+        "Additional eSpeak/eSpeak NG authors as recorded by upstream"
+      ],
+      "source": "https://github.com/espeak-ng/espeak-ng",
+      "dataSource": "https://github.com/svenflow/kitten-tts-webgpu/tree/1e65d24b54ef9f5538b130c41ce0185abdccf630/public",
+      "dataFiles": [
+        {
+          "path": "espeak-en-dict.tsv",
+          "sha256": "b9dcb56fc857765b5cd27da40264ff4477ac400bfb1b6464360b5930eabc5abe"
+        },
+        {
+          "path": "en_rules",
+          "sha256": "884550dda08d0ba9d5ca713bf3a5ed295002d5de8a43b4346a81fcd040d19dc8"
+        }
+      ],
+      "modifications": "The two text data files match the pinned upstream files byte-for-byte. Native backend build provenance is supplied by the upstream phonemizer distribution."
+    }
+  ]
+}

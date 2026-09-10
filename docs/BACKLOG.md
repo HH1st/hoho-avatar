@@ -8,31 +8,24 @@
 - add automatic reconnect and conversation restoration policies (manual retry starts a fresh session today);
 - replace the browser-to-gateway WebSocket with WebRTC when the Azure deployment supports the required server-side control pattern.
 
-This document records work that is intentionally outside the current source-first release. Hoho Avatar is not currently distributed as an npm package. Users clone the repository, install development dependencies, and run or build the source locally.
+The browser SDK builds independently from the demo. SDK previews use the public npm `next` tag.
 
 ## Package distribution
 
-Status: deferred.
+Implemented:
 
-Before publishing an npm package, decide and implement:
+- `@hh1st/hoho-avatar` ESM, declarations, source maps and an explicit exports/files contract;
+- `createAvatar()` for microphone, local files and external PCM;
+- original MIT Pixel Bot assets, with no Azure or KittenTTS runtime dependencies;
+- separate `dist-sdk/` and demo `dist/` output;
+- clean tarball installation with native browser and Vite production verification;
+- tag-driven trusted-publishing workflow, changelog and release guidance.
 
-- the final package name and npm owner or organization;
-- whether the engine ships as one package or as separate core and renderer packages;
-- a stable public API and semantic-versioning policy;
-- ESM output, type declarations, source maps, and browser compatibility targets;
-- separate output directories for the reusable library and browser demo;
-- an explicit `exports` map and a minimal npm `files` allowlist;
-- a build hook for release packaging without affecting normal source development;
-- a clean-install consumer fixture that installs the generated tarball and imports its public API;
-- public-registry publishing from CI with provenance and least-privilege credentials;
-- release notes, tags, changelog conventions, and rollback guidance.
+Release operations:
 
-Acceptance criteria:
-
-1. `npm pack --dry-run` contains only intended runtime files, declarations, license, and package documentation.
-2. A fresh external fixture can install the tarball and instantiate `TalkingSprite` without importing repository-internal paths.
-3. The demo build and library build do not overwrite or depend on each other's output.
-4. Publishing is automated from a reviewed Git tag and does not rely on a developer's local npm configuration.
+- configure the npm trusted publisher / GitHub npm environment for subsequent automated releases;
+- review and authorize each version tag and registry publication;
+- consider framework adapters and consumer checks for additional bundlers.
 
 ## Dependency reproducibility
 

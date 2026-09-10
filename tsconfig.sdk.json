@@ -1,0 +1,12 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "dist-sdk/types",
+    "declaration": true,
+    "emitDeclarationOnly": true,
+    "types": ["vite/client"]
+  },
+  "include": ["src"],
+  "exclude": []
+}

@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Third-party notices — Hoho Avatar</title>
+  <style>
+    :root { color-scheme: dark; font: 16px/1.7 system-ui, sans-serif; background: #101012; color: #eee8e8; }
+    body { max-width: 800px; margin: auto; padding: 32px 22px 64px; }
+    a { color: #ffb09c; overflow-wrap: anywhere; }
+    h1, h2 { line-height: 1.25; } h2 { margin-top: 36px; }
+    code { overflow-wrap: anywhere; } li { margin-bottom: 8px; }
+  </style>
+</head>
+<body>
+  <a href="./">Back to Avatar Studio</a>
+  <h1>Third-party notices</h1>
+  <p>The browser demo includes the components below. Their licenses apply to their respective code and data; the project MIT license does not replace them. The standalone Hoho SDK does not include these third-party runtime components or phonemizer data.</p>
+  <p><a href="licenses/hoho-avatar-MIT.txt">Hoho Avatar MIT license</a> · <a href="third-party-sources.json">Pinned source references and data checksums</a></p>
+
+  <h2>fflate 0.8.2</h2>
+  <p>Copyright (c) 2026 Arjun Barrett. Used for local character ZIP import. Included from the npm distribution and bundled/minified by Vite.</p>
+  <p><a href="licenses/fflate-MIT.txt">Full MIT license and copyright notice</a> · <a href="https://github.com/101arrowz/fflate/tree/d3243651cb142e3e04f3e4bc037b9e985878f444">Source at the published revision</a></p>
+
+  <h2>kitten-tts-webgpu 0.1.1</h2>
+  <p>Copyright (c) 2026 svenflow. Used for on-device speech synthesis. Included from the npm distribution and bundled/minified by Vite. Its MIT license covers its engine/wrapper; the eSpeak components and data retain their separate terms.</p>
+  <p><a href="licenses/kitten-tts-webgpu-MIT.txt">Full MIT license and copyright notice</a> · <a href="https://github.com/svenflow/kitten-tts-webgpu/tree/1e65d24b54ef9f5538b130c41ce0185abdccf630">Source at the published revision</a></p>
+
+  <h2>Phonemizer.js 1.2.1</h2>
+  <p>Phonemizer.js by Xenova. The JavaScript wrapper is Apache-2.0 and is included through the KittenTTS distribution. The underlying eSpeak NG backend has separate GPL terms. No local modifications were made to the upstream wrapper.</p>
+  <p><a href="licenses/phonemizer-Apache-2.0.txt">Full Apache License 2.0</a> · <a href="https://github.com/xenova/phonemizer.js/tree/6835144b7ee9043129222549c1ed2f6a27216278">Source at the published revision</a></p>
+
+  <h2>eSpeak / eSpeak NG</h2>
+  <p>The pronunciation dictionary, letter-to-sound rules and phonemizer backend originate from eSpeak/eSpeak NG. Copyright (C) 2005–2014 Jonathan Duddington; Copyright (C) 2016–2017 Reece H. Dunn; and other authors recorded in upstream sources.</p>
+  <p>These components are GPL-licensed. The English rules explicitly permit GPL version 3 or, at your option, a later version. They are provided without warranty; see the complete license below.</p>
+  <ul>
+    <li><a href="licenses/GPL-3.0.txt">Full GNU General Public License version 3</a></li>
+    <li>Distributed text data: <a href="espeak-en-dict.tsv">English dictionary</a> and <a href="en_rules">English rules</a>. Both match the pinned KittenTTS upstream files byte-for-byte, including the rules copyright header.</li>
+    <li><a href="https://github.com/svenflow/kitten-tts-webgpu/tree/1e65d24b54ef9f5538b130c41ce0185abdccf630/public">Pinned data source</a> and <a href="https://codeload.github.com/svenflow/kitten-tts-webgpu/tar.gz/1e65d24b54ef9f5538b130c41ce0185abdccf630">KittenTTS source archive</a>.</li>
+    <li><a href="https://github.com/espeak-ng/espeak-ng">eSpeak NG source project</a> and <a href="https://codeload.github.com/xenova/phonemizer.js/tar.gz/6835144b7ee9043129222549c1ed2f6a27216278">pinned Phonemizer.js source archive</a>.</li>
+  </ul>
+  <p>The pinned Phonemizer.js archive includes its distributed worker and data. It does not establish the exact native eSpeak build revision or a complete native rebuild recipe. These notices document available provenance; they are not a claim that adding license text alone satisfies every corresponding-source obligation.</p>
+
+  <h2>Resources loaded separately</h2>
+  <p>KittenTTS model weights are downloaded from public Hugging Face repositories on first use and are not included in this demo artifact or the SDK package. See <a href="https://huggingface.co/KittenML/kitten-tts-nano-0.8-int8">the upstream model card and license</a>. The demo requests DM Sans and Manrope through Google Fonts; font files are served by Google, not bundled in this repository.</p>
+</body>
+</html>

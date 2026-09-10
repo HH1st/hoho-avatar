@@ -4,17 +4,46 @@ Hoho Avatar is an open-source toolkit for building speaking and audio-reactive a
 
 **[Try the live microphone and local audio demo](https://hh1st.github.io/hoho-avatar/)**
 
-![Niu Lai reacting to voice with Hoho Avatar](docs/images/niu-lai-talking.gif)
+![Niu Lai reacting to voice with Hoho Avatar](https://raw.githubusercontent.com/HH1st/hoho-avatar/main/docs/images/niu-lai-talking.gif)
 
 Click **Try a sample** in the live demo to see Niu Lai react immediately—no microphone permission or audio file required.
 
-![Hoho Avatar Studio with its charcoal and coral interface, character cards, and voice controls](docs/images/niu-lai-demo.png)
+![Hoho Avatar Studio with its charcoal and coral interface, character cards, and voice controls](https://raw.githubusercontent.com/HH1st/hoho-avatar/main/docs/images/niu-lai-demo.png)
 
 _The redesigned Avatar Studio: a charcoal stage, coral accents, character cards, and four voice modes._
 
 The project currently ships a browser-first TypeScript engine that analyzes streaming PCM audio, selects five mouth states, adds automatic blinking, and renders layered PNG characters with Canvas 2D. The demo accepts microphone input, a local audio file, locally generated English speech from KittenTTS, or an optional Azure Realtime voice-agent session. Local audio analysis, file decoding, and KittenTTS stay in the browser; Voice Agent mode explicitly sends microphone audio to the configured Azure OpenAI resource.
 
 Support for additional 2D, Live2D, and 3D renderers is a long-term direction, not a feature of the current release.
+
+## Use the SDK
+
+**`@hh1st/hoho-avatar`** is a framework-independent SDK with ESM, TypeScript declarations, no runtime dependencies, and an included original Pixel Bot character. The first preview is `0.1.0-beta.1`, published under the `next` tag.
+
+```bash
+npm install @hh1st/hoho-avatar@next --registry=https://registry.npmjs.org
+```
+
+To use an exact preview version, install `@hh1st/hoho-avatar@0.1.0-beta.1`. To build a local tarball from source, run `npm install` and `npm pack` in this repository, then install the generated `.tgz` in your application.
+
+```ts
+import { createAvatar } from "@hh1st/hoho-avatar";
+import pixelBot from "@hh1st/hoho-avatar/characters/pixel-bot";
+
+const avatar = await createAvatar(canvas, { character: pixelBot });
+
+// Call from a click/tap handler.
+startButton.onclick = () => {
+  void avatar.startMicrophone().catch(console.error);
+};
+stopButton.onclick = () => avatar.stopAudio();
+
+// Or: await avatar.playAudio(fileOrUrl);
+// Or: avatar.pushPCM(chunk, 24_000);
+// When removing the canvas: await avatar.destroy();
+```
+
+See the [SDK guide](docs/SDK.md) for file playback, PCM/TTS integration, framework lifecycle, asset hosting and API details. The [quickstart application](https://github.com/HH1st/hoho-avatar/tree/main/examples/sdk-quickstart) imports only the installed package; the tarball test runs it without access to repository source.
 
 ## Try it in 60 seconds
 
@@ -52,7 +81,7 @@ The bundled example characters are:
 - `pixel-bot` — the retro robot character.
 - `pixel-portrait` — a front-facing pixel-art portrait.
 
-See [ASSETS.md](ASSETS.md) for their licensing and provenance notes.
+See [ASSETS.md](https://github.com/HH1st/hoho-avatar/blob/main/ASSETS.md) for their licensing and provenance notes.
 
 ## Run from source
 
@@ -74,16 +103,16 @@ my-character.zip
     └── mouth-{closed,small,large,wide,round}.png
 ```
 
-Characters produced by the bundled [asset-generation Skill](skills/generate-talking-sprite-character/SKILL.md) follow this layout. Zip the generated character directory before loading it in the demo. The files are not uploaded to a server.
+Characters produced by the bundled [asset-generation Skill](https://github.com/HH1st/hoho-avatar/blob/main/skills/generate-talking-sprite-character/SKILL.md) follow this layout. Zip the generated character directory before loading it in the demo. The files are not uploaded to a server.
 
-Hoho Avatar is currently source-first and is not published as an npm package. Use the checked-out source directly or adapt the example application for your integration.
+Use the SDK package for integration. The browser studio and optional Azure gateway remain runnable from source; they are not included in the SDK package.
 
-## Engine usage from source
+## Low-level engine usage
 
-The repository entry point is `src/index.ts`. For example, code inside `examples/basic/` imports the engine directly from the source tree and creates a sprite with a canvas, character definition, and PCM sample rate:
+The package also exports the existing engine primitives for custom integrations. `TalkingSprite` accepts a canvas, character definition and PCM sample rate:
 
 ```ts
-import { TalkingSprite } from "../../src";
+import { TalkingSprite } from "@hh1st/hoho-avatar";
 
 const canvas = document.querySelector<HTMLCanvasElement>("#avatar")!;
 
@@ -116,7 +145,7 @@ sprite.destroy();
 `AudioClipPlayer` decodes a complete browser-supported audio file, plays it through Web Audio, and emits mono `Float32Array` PCM chunks for `TalkingSprite`:
 
 ```ts
-import { AudioClipPlayer, TalkingSprite } from "../../src";
+import { AudioClipPlayer, TalkingSprite } from "@hh1st/hoho-avatar";
 
 const canvas = document.querySelector<HTMLCanvasElement>("#avatar")!;
 const file = document.querySelector<HTMLInputElement>("#audioFile")!.files![0]!;
@@ -151,7 +180,7 @@ sprite.destroy();
 `StreamingTTSPlayer` accepts complete text or text deltas, groups them into short speakable phrases, starts playback as soon as the first phrase is ready, synthesizes later phrases while audio is playing, and sends playback PCM through the same avatar input. Supply any synthesizer that returns a browser-decodable audio `Blob`:
 
 ```ts
-import { StreamingTTSPlayer, TalkingSprite } from "../../src";
+import { StreamingTTSPlayer, TalkingSprite } from "@hh1st/hoho-avatar";
 import { textToSpeech } from "kitten-tts-webgpu";
 
 const tts = new StreamingTTSPlayer({
@@ -205,7 +234,10 @@ Calling `VuiClient.disconnect()` or `destroy()` while `connect()` is pending rej
 
 Session setup has a 30-second deadline (`connectTimeoutMs` can override it). The demo checks local gateway health, permits cancellation during authentication or microphone permission, and releases capture and playback on disconnect or failure. **RETRY CONNECTION** starts a new conversation; previous conversation history is not restored. The speaking indicator stays active until queued audio finishes, and **INTERRUPT** immediately stops local playback while notifying the gateway.
 
-The source entry point exports:
+The package entry point exports:
+
+- `createAvatar`, `Avatar` and `AvatarOptions`
+- `MicrophoneInput`
 
 - `TalkingSprite`
 - `PCMAnalyzer`
@@ -274,7 +306,7 @@ Minimal configuration:
 }
 ```
 
-Image paths are resolved relative to `character.json`. Anchors are the center points of their corresponding transparent PNG layers. See [the complete V1 format guidance](skills/generate-talking-sprite-character/references/character-format.md) for details.
+Image paths are resolved relative to `character.json`. Anchors are the center points of their corresponding transparent PNG layers. See [the complete V1 format guidance](https://github.com/HH1st/hoho-avatar/blob/main/skills/generate-talking-sprite-character/references/character-format.md) for details.
 
 ## Generate an asset with Codex
 
@@ -310,6 +342,8 @@ npm run dev        # Start the browser demo from source
 npm run typecheck  # Type-check source, examples, and tests
 npm test           # Run deterministic engine and audio-player tests
 npm run build      # Build the browser demo
+npm run build:sdk  # Build SDK ESM, declarations and assets
+npm run test:package # Install and test the SDK tarball in an independent app
 ```
 
 Browser regression tests use Chromium with synthetic microphone input and a simulated gateway; they do not contact Azure or require credentials:
@@ -344,7 +378,7 @@ skills/generate-talking-sprite-character/
 └── assets/
 
 docs/
-└── BACKLOG.md      # Deferred packaging and renderer work
+└── BACKLOG.md      # Remaining release and renderer work
 ```
 
 ### Architecture
@@ -388,12 +422,14 @@ The current engine is not phoneme-level lip sync, a skeletal animation system, o
 
 Longer term, Hoho Avatar aims to expose shared audio-driven motion data to multiple renderer adapters, including richer 2D, Live2D, and 3D integrations. Those adapters are not yet implemented.
 
-Packaging, release automation, dependency reproducibility, and renderer expansion are tracked in [docs/BACKLOG.md](docs/BACKLOG.md).
+SDK packaging and consumer validation are implemented. Preview releases use the public npm `next` tag; see [release instructions](https://github.com/HH1st/hoho-avatar/blob/main/docs/RELEASING.md) and [remaining work](https://github.com/HH1st/hoho-avatar/blob/main/docs/BACKLOG.md).
 
 ## Contributing and security
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request. Report security-sensitive issues according to [SECURITY.md](SECURITY.md).
+See [CONTRIBUTING.md](https://github.com/HH1st/hoho-avatar/blob/main/CONTRIBUTING.md) before opening a pull request. Report security-sensitive issues according to [SECURITY.md](https://github.com/HH1st/hoho-avatar/blob/main/SECURITY.md).
 
 ## License
 
-Hoho Avatar is available under the [MIT License](LICENSE). The engine source, bundled Skill, documentation, and included example assets are covered unless a file states otherwise. See [ASSETS.md](ASSETS.md) for asset-specific notes.
+The browser demo distributes [third-party notices](https://hh1st.github.io/hoho-avatar/third-party-notices.html), full license texts, and pinned source references alongside its assets. These notices cover fflate, KittenTTS, Phonemizer.js and eSpeak data/backend components. They are separate from the standalone SDK, which has no runtime npm dependencies.
+
+Hoho Avatar is available under the [MIT License](LICENSE). The engine source, bundled Skill, documentation, and included example assets are covered unless a file states otherwise. See [ASSETS.md](https://github.com/HH1st/hoho-avatar/blob/main/ASSETS.md) for asset-specific notes.
