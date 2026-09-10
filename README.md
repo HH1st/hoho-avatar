@@ -18,13 +18,13 @@ Support for additional 2D, Live2D, and 3D renderers is a long-term direction, no
 
 ## Use the SDK
 
-**`@hh1st/hoho-avatar`** is a framework-independent SDK with ESM, TypeScript declarations, no runtime dependencies, and an included original Pixel Bot character. The first preview is `0.1.0-beta.1`, published under the `next` tag.
+**`@hh1st/hoho-avatar`** is a framework-independent SDK with ESM, TypeScript declarations, no runtime dependencies, and an included original Pixel Bot character. The current preview is `0.1.0-beta.2`, published under the `next` tag.
 
 ```bash
 npm install @hh1st/hoho-avatar@next --registry=https://registry.npmjs.org
 ```
 
-To use an exact preview version, install `@hh1st/hoho-avatar@0.1.0-beta.1`. To build a local tarball from source, run `npm install` and `npm pack` in this repository, then install the generated `.tgz` in your application.
+To use an exact preview version, install `@hh1st/hoho-avatar@0.1.0-beta.2`. To build a local tarball from source, run `npm install` and `npm pack` in this repository, then install the generated `.tgz` in your application.
 
 ```ts
 import { createAvatar } from "@hh1st/hoho-avatar";

@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.1.0-beta.2 — 2026-09-10
+
 - Move SDK microphone capture from `ScriptProcessorNode` to `AudioWorklet`, using 20 ms mono PCM batches and preserving muted monitoring and cancellation cleanup.
 - Reject pending microphone setup promptly on disposal, including while a worklet module is still downloading.
 - Add a warm Morning appearance alongside Night, with a persistent theme switch and shareable theme URLs.

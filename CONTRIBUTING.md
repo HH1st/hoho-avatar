@@ -39,7 +39,7 @@ For a manual demo session with local SDK changes, stop the dev server, then run 
 
 ```bash
 npm pack
-npm --prefix examples/basic install --no-save --package-lock=false ./hh1st-hoho-avatar-0.1.0-beta.1.tgz
+npm --prefix examples/basic install --no-save --package-lock=false ./hh1st-hoho-avatar-0.1.0-beta.2.tgz
 npm run dev -- --force
 ```
 
