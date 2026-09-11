@@ -16,6 +16,8 @@ The Studio imports local SDK source for both 2D and 3D. It lazy-loads the Three.
 
 ## Blender source
 
+For creating or adapting another speaking 3D character, use the repository's [generate-threejs-avatar Skill](../skills/generate-threejs-avatar/SKILL.md). It covers Blender authoring, mouth and blink shape keys, GLB validation, local import, and optional Studio integration.
+
 `assets/blender/mochi.blend` contains the original Mochi character, editable meshes, materials, shape keys, and a studio camera/light setup. `public/models/mochi/mochi.glb` is its runtime export (about 1.2 MB). Both are original project assets under the MIT license; no external model or texture is used.
 
 Rebuild with Blender 4.5 LTS:

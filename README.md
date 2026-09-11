@@ -77,7 +77,7 @@ Hoho Avatar sits after your audio source: feed it mono PCM from a realtime model
 | --- | --- | --- |
 | Canvas 2D engine | `src/` | PCM analysis, mouth classification, blinking, asset loading, and Canvas rendering |
 | Demo and assets | `examples/basic/`, `public/characters/` | Microphone and local-file playback with three engine-ready example characters |
-| Asset Skill | `skills/generate-talking-sprite-character/` | A Codex workflow for generating, validating, previewing, and integrating character assets |
+| Asset Skills | `skills/generate-talking-sprite-character/`, `skills/generate-threejs-avatar/` | Codex workflows for creating, validating, and integrating 2D sprites and 3D GLB avatars |
 
 The bundled example characters are:
 
@@ -296,6 +296,16 @@ python -m pip install -r skills/generate-talking-sprite-character/requirements.t
 ```
 
 Image generation also requires an ImageGen capability when a character body does not already exist.
+
+For 3D characters, use [generate-threejs-avatar](skills/generate-threejs-avatar/SKILL.md):
+
+```text
+Use $generate-threejs-avatar from skills/generate-threejs-avatar
+to create a friendly 3D astronaut cat with speaking mouth shapes and blinking.
+Keep the Blender source and GLB under working/models/ and validate local import.
+```
+
+This Skill follows the existing Blender/Three.js model contract, reviews exported expressions, and supports optional demo integration. Blender is required for authoring; working-only avatars load directly as GLB files through **Import avatar**.
 
 ## Development
 

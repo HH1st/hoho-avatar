@@ -1,0 +1,4 @@
+interface:
+  display_name: "Generate Three.js Avatar"
+  short_description: "Create Blender/GLB avatars with speech and blink morphs"
+  default_prompt: "Use $generate-threejs-avatar to create a speaking 3D avatar for this project's Three.js renderer, validate its mouth and blink shapes, and deliver the Blender source and importable GLB."
