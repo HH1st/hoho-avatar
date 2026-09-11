@@ -281,7 +281,7 @@ export function createStudioAudio({ stage, provider, mountSelectedAvatar, status
     try {
       const response = await fetch(`${import.meta.env.BASE_URL}audio/sample-voice.wav`);
       if (!response.ok) throw new Error(`Unable to load sample audio (${response.status}).`);
-      const sample = new File([await response.arrayBuffer()], "hoho-sample-voice.wav", { type: "audio/wav" });
+      const sample = new File([await response.arrayBuffer()], "A little hello — English.wav", { type: "audio/wav" });
       if (epoch !== clipEpoch || provider() !== "file") return;
       if (await loadAudioClip(sample, epoch)) await playAudioClip();
     } catch (error) {

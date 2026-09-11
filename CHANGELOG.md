@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Replace the short audio sample with a complete English greeting.
 - Frame the Live2D sample around its artwork and show a rendered character portrait in the Studio picker. Reset view restores the larger framing.
 - Enable the Live2D sample on GitHub Pages using checksum-verified official assets, same-origin URLs, retained notices and production-browser smoke tests. SDK contents remain unchanged.
 
