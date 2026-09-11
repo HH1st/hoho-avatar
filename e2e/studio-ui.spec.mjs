@@ -6,6 +6,12 @@ test("character cards, import, and sample shortcut operate the studio", async ({
   const errors = [];
   page.on("pageerror", (error) => errors.push(error.message));
   await page.goto("./");
+  await expect(page.locator("#tab-file")).toHaveAttribute("aria-selected", "true");
+  await expect(page.locator("#panel-file")).toBeVisible();
+  await expect(page.locator("#panel-mic")).toBeHidden();
+  await page.locator("#sampleAudioButton").click();
+  await expect(page.locator("#statusText")).toHaveText("AUDIO LIVE");
+  await page.locator("#audioStopButton").click();
   const bot = page.getByRole("button", { name: /Pixel Bot/ });
   await bot.click();
   await expect(bot).toHaveAttribute("aria-pressed", "true");

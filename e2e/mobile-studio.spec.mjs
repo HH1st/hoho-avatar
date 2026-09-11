@@ -32,6 +32,7 @@ for (const size of [{ width: 390, height: 844 }, { width: 320, height: 568 }, { 
 test("mobile microphone and sample playback keep the live avatar beside their stop controls", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("./");
+  await page.locator("#tab-mic").click();
   await page.locator("#micButton").click();
   await expect(page.locator("#statusText")).toHaveText("MIC LIVE");
   await expectPreviewAndControl(page, "#micButton");

@@ -59,6 +59,7 @@ test('changing audio providers and replaying a sample preserves the loaded model
 test('the same microphone and file controls drive either renderer', async ({ page }) => {
   await page.goto('./?character=mochi');
   await expect(page.locator('.stage-wrap')).toHaveAttribute('data-loaded', 'true');
+  await page.locator('#tab-mic').click();
   await page.locator('#micButton').click();
   await expect(page.locator('#statusText')).toHaveText('MIC LIVE');
   await choose(page, 'pixel-bot');
@@ -89,6 +90,7 @@ test('3D remains visible with voice controls on mobile', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('./?character=mochi');
   await expect(page.locator('.stage-wrap')).toHaveAttribute('data-loaded', 'true');
+  await page.locator('#tab-mic').click();
   await page.locator('#micButton').scrollIntoViewIfNeeded();
   const layout = await page.evaluate(() => ({
     width: document.documentElement.scrollWidth, viewport: innerWidth,

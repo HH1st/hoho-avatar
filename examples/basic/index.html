@@ -110,21 +110,21 @@
               <div class="control-heading"><div><p class="eyebrow">THE VOICE ROOM</p><h2 id="voiceTitle">Make yourself heard.</h2></div><span class="heading-symbol" aria-hidden="true"><svg class="icon"><use href="#i-audio"/></svg></span></div>
               <p class="control-description">Four ways to turn sound into personality.</p>
               <div class="provider-tabs" role="tablist" aria-label="Audio provider">
-                <button id="tab-mic" class="provider-tab active" data-provider="mic" role="tab" aria-selected="true" aria-controls="panel-mic"><svg class="icon"><use href="#i-mic"/></svg><span>Microphone</span><small>Your own voice</small></button>
-                <button id="tab-file" class="provider-tab" data-provider="file" role="tab" aria-selected="false" aria-controls="panel-file" tabindex="-1"><svg class="icon"><use href="#i-audio"/></svg><span>Audio file</span><small>Play something</small></button>
+                <button id="tab-mic" class="provider-tab" data-provider="mic" role="tab" aria-selected="false" aria-controls="panel-mic" tabindex="-1"><svg class="icon"><use href="#i-mic"/></svg><span>Microphone</span><small>Your own voice</small></button>
+                <button id="tab-file" class="provider-tab active" data-provider="file" role="tab" aria-selected="true" aria-controls="panel-file"><svg class="icon"><use href="#i-audio"/></svg><span>Audio file</span><small>Play something</small></button>
                 <button id="tab-tts" class="provider-tab" data-provider="tts" role="tab" aria-selected="false" aria-controls="panel-tts" tabindex="-1"><svg class="icon"><use href="#i-text"/></svg><span>Local TTS</span><small>Turn text into voice</small></button>
                 <button id="tab-agent" class="provider-tab" data-provider="agent" role="tab" aria-selected="false" aria-controls="panel-agent" tabindex="-1"><svg class="icon"><use href="#i-spark"/></svg><span>Voice agent</span><small>Have a conversation</small></button>
               </div>
 
               <div class="provider-body">
-                <div id="panel-mic" class="provider-panel active" data-provider-panel="mic" role="tabpanel" aria-labelledby="tab-mic">
+                <div id="panel-mic" class="provider-panel" data-provider-panel="mic" role="tabpanel" aria-labelledby="tab-mic" hidden>
                   <div class="mic-illustration" aria-hidden="true"><span></span><span></span><span></span><div><svg class="icon"><use href="#i-mic"/></svg></div><span></span><span></span><span></span></div>
                   <h3>The mic is yours.</h3><p>A story. A passing thought. <br />Whatever it is, give it a voice.</p>
                   <button id="micButton" class="button primary" type="button"><svg class="icon"><use href="#i-mic"/></svg><span id="buttonLabel">Start microphone</span><svg class="icon button-arrow"><use href="#i-arrow"/></svg></button>
                   <span class="action-note">You choose when to start and stop.</span>
                 </div>
 
-                <div id="panel-file" class="provider-panel" data-provider-panel="file" role="tabpanel" aria-labelledby="tab-file" hidden>
+                <div id="panel-file" class="provider-panel active" data-provider-panel="file" role="tabpanel" aria-labelledby="tab-file">
                   <p class="panel-eyebrow">SOUND ON, PERSONALITY ON</p><h3>A voice, ready to play.</h3><p>Try an AI-voiced English greeting, or bring your own audio.</p>
                   <div class="provider-actions"><button id="sampleAudioButton" class="button primary" type="button"><svg class="icon"><use href="#i-play"/></svg> Try sample</button><button id="audioChooseButton" class="button secondary" type="button"><svg class="icon"><use href="#i-upload"/></svg> Choose audio</button><input id="audioFile" type="file" accept="audio/*" hidden /></div>
                   <div class="audio-clip"><span id="audioStatus" aria-live="polite">No audio selected</span><div id="audioTrack" class="audio-track" role="progressbar" aria-label="Audio playback progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="audioTrackFill"></span></div><div class="audio-clip-bottom"><span id="audioProgress">00:00 / 00:00</span><div class="audio-actions"><button id="audioPlayButton" class="button mini" type="button" disabled>Play</button><button id="audioStopButton" class="button mini" type="button" disabled>Stop</button></div></div></div>

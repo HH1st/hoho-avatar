@@ -68,7 +68,7 @@ const barElements = Array.from({ length: 32 }, () => {
 
 let customModel: { bytes: ArrayBuffer; name: string } | undefined;
 let blinkTimer: ReturnType<typeof setTimeout> | undefined;
-let activeProvider: ProviderName = "mic";
+let activeProvider: ProviderName = "file";
 let providerAbort = new AbortController();
 let customAvatar: LoadedSpriteCharacterPackage | undefined;
 const avatars = {
