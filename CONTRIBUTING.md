@@ -42,4 +42,4 @@ Lint uses Oxlint's correctness rules across SDK, examples, server, scripts and t
 
 By contributing, you agree that your contribution is licensed under the repository's MIT License.
 
-`npm run setup:quickstart` builds and installs the SDK tarball through the quickstart manifest. Studio responsibilities are divided between CharacterStage (assets), StudioAudio (local audio), VoiceSession and main.ts (catalog/UI wiring).
+`npm run setup:quickstart` builds and installs the SDK tarball through the quickstart manifest. `Studio.ts` wires the demo features; character selection, stage rendering, audio controls and voice sessions have separate owners. See `examples/basic/README.md` for the module map.

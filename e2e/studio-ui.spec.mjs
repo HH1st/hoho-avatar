@@ -2,6 +2,26 @@ import { test, expect } from "@playwright/test";
 import { zipSync } from "fflate";
 import { readFileSync, readdirSync } from "node:fs";
 
+test('initial layout is styled while the application module is still loading', async ({ page }) => {
+  await page.route('**/main.ts', (route) => route.abort());
+  await page.goto('./');
+  const initial = await page.locator('.brand-mark').evaluate((mark) => ({
+    width: mark.getBoundingClientRect().width,
+    height: mark.getBoundingClientRect().height,
+    fill: getComputedStyle(mark.querySelector('rect')).fill,
+    ink: getComputedStyle(mark).getPropertyValue('--ink').trim(),
+    libraryWidth: document.querySelector('.icon-library').getBoundingClientRect().width,
+    libraryHeight: document.querySelector('.icon-library').getBoundingClientRect().height,
+  }));
+  expect(initial.width).toBe(35);
+  expect(initial.height).toBe(35);
+  expect(initial.ink).not.toBe('');
+  expect(initial.fill).not.toBe('rgb(0, 0, 238)');
+  expect(initial.fill).not.toBe('rgb(85, 26, 139)');
+  expect(initial.libraryWidth).toBe(0);
+  expect(initial.libraryHeight).toBe(0);
+});
+
 test("character cards, import, and sample shortcut operate the studio", async ({ page }) => {
   const errors = [];
   page.on("pageerror", (error) => errors.push(error.message));
