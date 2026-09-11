@@ -12,6 +12,8 @@ export interface Live2DRendererOptions {
   parameters?: Live2DParameterOptions;
   pixelRatio?: number;
   padding?: number;
+  /** Frame a region in model canvas pixels, excluding empty margins. */
+  viewBox?: { x: number; y: number; width: number; height: number };
 }
 
 /** Adapts shared frames and viewport controls to a private model runtime. */
@@ -39,6 +41,8 @@ export class Live2DRenderer implements AvatarRenderer {
   constructor(private readonly canvas: HTMLCanvasElement, private readonly options: Live2DRendererOptions, private readonly context?: RendererContext) {
     if (options.pixelRatio !== undefined && (!Number.isFinite(options.pixelRatio) || options.pixelRatio <= 0)) throw new Error('pixelRatio must be positive and finite');
     if (options.padding !== undefined && (!Number.isFinite(options.padding) || options.padding < 0 || options.padding >= 0.5)) throw new Error('padding must be between 0 and 0.5');
+    const box = options.viewBox;
+    if (box && (![box.x, box.y, box.width, box.height].every(Number.isFinite) || box.width <= 0 || box.height <= 0)) throw new Error('viewBox must have finite coordinates and positive dimensions');
     this.ready = this.load().catch((error) => { this.destroy(); throw error; });
   }
   get capabilities(): RendererCapabilities { return this.rig?.capabilities ?? { mouth: [], blink: false, viewControl: true }; }
@@ -69,10 +73,12 @@ export class Live2DRenderer implements AvatarRenderer {
   resize(): void {
     if (this.disposed || !this.runtime) return;
     const { width, height } = this.canvas.getBoundingClientRect();
-    const size = this.runtime.size;
+    const size = this.options.viewBox ?? this.runtime.size;
     if (width <= 0 || height <= 0 || size.width <= 0 || size.height <= 0) return;
     const scale = Math.min(width / size.width, height / size.height) * (1 - 2 * (this.options.padding ?? 0.08)) * this.zoom;
-    this.runtime.fit(width, height, scale);
+    const box = this.options.viewBox;
+    if (box) this.runtime.fit(width, height, scale, { x: box.x + box.width / 2, y: box.y + box.height / 2 });
+    else this.runtime.fit(width, height, scale);
   }
   resetView(): void { this.zoom = 1; this.resize(); }
   setViewControlEnabled(enabled: boolean): void { this.viewControl = enabled; }

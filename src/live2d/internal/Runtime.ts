@@ -6,7 +6,7 @@ export interface Live2DRuntime {
   readonly size: { width: number; height: number };
   /** Apply parameters after simulation, immediately before the final model update/draw. */
   draw(deltaSeconds: number, applyParameters: () => void): void;
-  fit(width: number, height: number, scale: number): void;
+  fit(width: number, height: number, scale: number, center?: { x: number; y: number }): void;
   destroy(): void;
 }
 

@@ -92,11 +92,11 @@ h1 > span { color: #ffb09c; font-family: Georgia, 'Times New Roman', serif; font
 .character-choice { position: relative; display: flex; align-items: center; gap: 10px; padding: 10px; min-width: 0; border: 1px solid #353036; border-radius: 11px; text-align: left; color: var(--ink); background: transparent; transition: border-color .15s, background .15s; }
 .character-choice:hover { background: #252125; border-color: #735750; }
 .character-choice.selected { border-color: #df8879; box-shadow: inset 0 0 0 .5px #df8879; background: #2d2224; }
-.character-thumb { display: grid; place-items: center; width: 48px; height: 52px; border-radius: 7px; overflow: hidden; flex: 0 0 auto; }
+.character-thumb { position: relative; display: grid; place-items: center; width: 48px; height: 52px; border-radius: 7px; overflow: hidden; flex: 0 0 auto; }
 .thumb-peach { background: #3d2827; }
 .thumb-smoke { background: #2d2b37; }
 .thumb-lilac { background: #342a36; }
-.character-thumb img { width: 100%; height: 100%; object-fit: contain; image-rendering: pixelated; }
+.character-thumb img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; image-rendering: pixelated; }
 .character-choice strong { display: block; font-size: 12px; font-weight: 650; line-height: 1.3; }
 .character-choice small { display: block; margin-top: 5px; font-size: 10px; color: #aea2a8; }
 .selection-check { display: none; width: 13px; height: 13px; position: absolute; right: 7px; top: 7px; stroke-width: 2; color: var(--accent); }
@@ -326,6 +326,8 @@ h1 > span { color: #ffb09c; font-family: Georgia, 'Times New Roman', serif; font
 .stage-wrap[data-renderer='live2d'] .floor-shadow { display: none; }
 .live2d-credit { font-size: 10px; color: var(--muted); line-height: 1.5; margin: 12px 2px; }
 .character-choice[data-avatar='live2d'] strong { overflow-wrap: anywhere; }
+.thumb-live2d { background: #eed4ad; }
+.character-thumb.thumb-live2d img { image-rendering: auto; padding: 2px; }
 .stage-topline, .stage-bottomline { pointer-events: none; }
 .model-tools { padding: 14px 2px 4px; }
 .model-tools-heading { display: flex; justify-content: space-between; align-items: center; color: var(--muted); font-size: 11px; gap: 10px; }
@@ -333,7 +335,7 @@ h1 > span { color: #ffb09c; font-family: Georgia, 'Times New Roman', serif; font
 .model-expressions button { border: 1px solid #82736d66; border-radius: 7px; padding: 8px 12px; background: transparent; color: var(--ink); cursor: pointer; font: inherit; font-size: 11px; }
 .model-expressions button[aria-pressed='true'] { border-color: #d98667; background: #d9866728; }
 .model-expressions button:disabled { opacity: .4; cursor: default; }
-.character-choice strong em { font-size: 8px; font-style: normal; padding: 2px 4px; border: 1px solid #b0a499; border-radius: 4px; margin-left: 2px; }
+.character-choice strong em { display: inline-block; white-space: nowrap; font-size: 8px; font-style: normal; padding: 2px 4px; border: 1px solid #b0a499; border-radius: 4px; margin-left: 2px; }
 .thumb-mochi { background: #dedac0; color: #35423e; }
 .mochi-icon { width: 32px; height: 30px; border: 4px solid #df9978; border-radius: 9px; background: #f4ebd8; text-align: center; font-size: 14px; letter-spacing: 3px; line-height: 11px; padding-left: 3px; }
 .mochi-icon small { margin: 0; color: #35423e; line-height: 8px; letter-spacing: 0; }

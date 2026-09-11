@@ -20,7 +20,9 @@ The 3D Studio uses Three.js under its MIT license, retained at `public/licenses/
 
 ## Live2D
 
-The optional Live2D renderer uses PixiJS and pixi-live2d-display with MIT notices in public/licenses/. Embedded Cubism framework components have Live2D's separate Open Software License. Proprietary Cubism Core and the optional Wankoromochi development fixture are stored only in ignored tmp/live2d-sample, with official source URLs and license documents. They are not part of public/, production builds or the npm package. See docs/LIVE2D.md for deployment requirements.
+The optional Live2D renderer uses PixiJS and pixi-live2d-display with MIT notices in public/licenses/. Embedded Cubism framework components have Live2D's separate Open Software License. Proprietary Cubism Core and the Wankoromochi fixture are cached in ignored tmp/live2d-sample. The dedicated Pages build copies the verified resources and license documents into its output; the ordinary production build and npm SDK exclude these resources. See docs/LIVE2D.md for deployment requirements.
+
+`examples/basic/assets/wankoromochi-preview.png` is a transparent rendering of the pinned official Wankoromochi sample, used in the character picker. It retains Live2D's Free Material and sample model terms, is excluded from this project's MIT license and the npm SDK, and is not original project artwork. The Studio displays the required Live2D credit whenever the sample and its preview are available. Its model source and checksums are recorded in `scripts/live2d-sample-manifest.mjs`.
 
 `public/espeak-en-dict.tsv` and `public/en_rules` are copied from the
 [`kitten-tts-webgpu` public assets](https://github.com/svenflow/kitten-tts-webgpu/tree/main/public).

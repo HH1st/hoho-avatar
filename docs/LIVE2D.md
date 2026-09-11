@@ -57,7 +57,7 @@ live2dRenderer({ model, coreUrl, parameters: {
 } });
 ~~~
 
-Values use model units and are clamped to parameter limits. Shared Thinking adds a head tilt when available. View controls fit the full model canvas, provide wheel zoom, reset and disable through the same Avatar methods. Models with empty margins may need zooming.
+Values use model units and are clamped to parameter limits. Shared Thinking adds a head tilt when available. View controls fit the full model canvas, provide wheel zoom, reset and disable through the same Avatar methods. For models with empty margins, supply `viewBox: { x, y, width, height }` in model canvas pixels to frame the artwork. Wheel zoom is relative to this framing, and Reset view restores it. The Studio supplies a viewBox for the official Wankoromochi sample.
 
 ## Unified Studio
 

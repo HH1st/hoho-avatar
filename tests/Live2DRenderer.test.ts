@@ -64,6 +64,29 @@ describe('Live2D renderer through its engine-neutral runtime port', () => {
     expect(canvas.addEventListener).not.toHaveBeenCalled();
   });
 
+  it('frames off-center artwork and restores that framing after wheel zoom', async () => {
+    const { canvas, runtime } = fixture();
+    const renderer = new Live2DRenderer(canvas, { model: '/sample.model3.json', padding: 0.1,
+      viewBox: { x: 300, y: 400, width: 200, height: 400 } });
+    await renderer.ready;
+    expect(runtime.fit).toHaveBeenLastCalledWith(400, 400, 0.8, { x: 400, y: 600 });
+    const wheel = vi.mocked(canvas.addEventListener).mock.calls.find(([name]) => name === 'wheel')![1] as (event: object) => void;
+    wheel({ deltaY: -100, preventDefault() {} });
+    expect(vi.mocked(runtime.fit).mock.lastCall![2]).toBeGreaterThan(0.8);
+    renderer.resetView();
+    expect(runtime.fit).toHaveBeenLastCalledWith(400, 400, 0.8, { x: 400, y: 600 });
+    renderer.destroy();
+  });
+
+  it('rejects invalid framing before loading a runtime', () => {
+    const { canvas } = fixture();
+    for (const viewBox of [{ x: NaN, y: 0, width: 100, height: 100 }, { x: 0, y: 0, width: 0, height: 100 },
+      { x: 0, y: 0, width: 100, height: -1 }]) {
+      expect(() => new Live2DRenderer(canvas, { model: '/sample.model3.json', viewBox })).toThrow('viewBox');
+    }
+    expect(mocks.load).not.toHaveBeenCalled();
+  });
+
   it('releases the runtime if parameter configuration fails after loading', async () => {
     const { canvas, runtime } = fixture();
     const renderer = new Live2DRenderer(canvas, { model: '/test.model3.json', parameters: { mouth: { large: { open: NaN, form: 0 } } } });

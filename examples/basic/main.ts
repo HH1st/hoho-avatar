@@ -7,6 +7,8 @@ import { VoiceSession, type VoiceSessionState } from "./VoiceSession";
 import { characterStateForVoiceSession } from './characterState';
 import { CharacterStage } from './CharacterStage';
 import { createStudioAudio, type ProviderName } from './StudioAudio';
+import { wankoromochiViewBox } from './live2dPresentation';
+import wankoromochiPreview from './assets/wankoromochi-preview.png';
 import "./style.css";
 import "./morning.css";
 import "./theme";
@@ -56,6 +58,7 @@ const sampleLive2DBase = hasPagesLive2D ? import.meta.env.BASE_URL + 'live2d/' :
 const live2dModelUrl = import.meta.env.VITE_LIVE2D_MODEL_URL?.trim() || (sampleLive2DBase ? sampleLive2DBase + 'Wanko/Wanko.model3.json' : '');
 const live2dCoreUrl = import.meta.env.VITE_LIVE2D_CORE_URL?.trim() || (sampleLive2DBase ? sampleLive2DBase + 'live2dcubismcore.min.js' : '');
 const live2dName = import.meta.env.VITE_LIVE2D_NAME?.trim() || (sampleLive2DBase ? 'Wankoromochi' : 'Live2D');
+const usesSampleLive2D = Boolean(sampleLive2DBase) && !import.meta.env.VITE_LIVE2D_MODEL_URL?.trim();
 
 const barElements = Array.from({ length: 32 }, () => {
   const bar = document.createElement("i");
@@ -177,10 +180,13 @@ async function mountSelectedAvatar(sampleRate: number, state: CharacterState, si
   stageLabel.textContent = selected.label;
   stageWrap.dataset.character = avatarSelect.value;
   stageWrap.dataset.renderer = selected.live2d ? 'live2d' : selected.model ? '3d' : '2d';
-  document.querySelector<HTMLElement>('#live2dCredit')!.hidden = !selected.live2d || !sampleLive2DBase || Boolean(import.meta.env.VITE_LIVE2D_MODEL_URL);
+  document.querySelector<HTMLElement>('#live2dCredit')!.hidden = !usesSampleLive2D;
   syncCharacterChoices();
   const ready = stage.ensure(key, async () => {
-    if (selected.live2d) return (await import('../../src/live2d')).live2dRenderer({ model: selected.live2d, coreUrl: live2dCoreUrl || undefined });
+    if (selected.live2d) return (await import('../../src/live2d')).live2dRenderer({
+      model: selected.live2d, coreUrl: live2dCoreUrl || undefined,
+      ...(usesSampleLive2D ? { viewBox: wankoromochiViewBox, padding: 0.12 } : {}),
+    });
     if (selected.model) return (await import('../../src/three')).threeRenderer({ model: selected.model, background: null });
     return canvasRenderer({ character: selected.character! });
   }, sampleRate, state, signal);
@@ -450,6 +456,12 @@ document.querySelector('#blinkPreview')!.addEventListener('click', () => {
 if (new URLSearchParams(location.search).get('character') === 'mochi') avatarSelect.value = 'mochi';
 const live2dButton = document.querySelector<HTMLButtonElement>('[data-avatar="live2d"]')!;
 live2dButton.hidden = !live2dModelUrl;
+const live2dPreview = document.querySelector<HTMLImageElement>('#live2dPreview')!;
+if (usesSampleLive2D) {
+  live2dPreview.src = wankoromochiPreview;
+  live2dPreview.hidden = false;
+  document.querySelector<SVGElement>('#live2dPreviewFallback')!.style.display = 'none';
+}
 document.querySelector('#live2dName')!.textContent = live2dName;
 if (live2dModelUrl && new URLSearchParams(location.search).get('character') === 'live2d') avatarSelect.value = 'live2d';
 

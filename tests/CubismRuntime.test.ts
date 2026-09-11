@@ -8,6 +8,7 @@ const fakes = vi.hoisted(() => ({
   loadCore: vi.fn().mockResolvedValue(undefined), loadAssets: vi.fn(), setup: vi.fn(),
   disposeAssets: vi.fn(), textureDestroy: vi.fn(), rendererDestroy: vi.fn(), updates: vi.fn(), parameters: [0, 0, 1, 1, 0],
   textureLoad: vi.fn(), modelDestroy: vi.fn(),
+  position: vi.fn(), scale: vi.fn(),
 }));
 vi.mock('../src/live2d/internal/CubismCore', () => ({ loadCubismCore: fakes.loadCore }));
 vi.mock('../src/live2d/internal/CubismAssets', () => ({ loadLive2DAssets: fakes.loadAssets }));
@@ -23,7 +24,7 @@ vi.mock('pixi-live2d-display/cubism4', () => ({
   Live2DFactory: { setupLive2DModel: fakes.setup },
   Live2DModel: class {
     destroyed = false; textures = []; on() {} emit() {} removeAllListeners() {}
-    anchor = { set() {} }; scale = { set() {} }; position = { set() {} };
+    anchor = { set() {} }; scale = { set: fakes.scale }; position = { set: fakes.position };
     update = fakes.updates;
     internalModel = {
       width: 100, height: 200, eyeBlink: {}, lipSync: true,
@@ -93,6 +94,11 @@ describe('Cubism runtime integration', () => {
     expect(runtime.parameters.getParameterIndex('ParamMouthOpenY')).toBe(0);
     expect(runtime.parameters).not.toHaveProperty('getModel');
     expect(runtime.size).toEqual({ width: 100, height: 200 });
+    runtime.fit(400, 300, 2, { x: 40, y: 150 });
+    expect(fakes.scale).toHaveBeenLastCalledWith(2);
+    expect(fakes.position).toHaveBeenLastCalledWith(220, 50);
+    runtime.fit(400, 300, 2);
+    expect(fakes.position).toHaveBeenLastCalledWith(200, 150);
     const settings = fakes.setup.mock.calls[0]![1];
     expect(settings.resolveURL('blob:http://local.test/asset')).toBe('blob:http://local.test/asset');
     const apply = vi.fn();

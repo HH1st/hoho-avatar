@@ -41,7 +41,10 @@ test('a 2D visit does not load Live2D until selected', async ({ page }) => {
   const requests = []; page.on('request', (request) => requests.push(request.url()));
   await page.goto('./');
   await expect(page.locator('.stage-wrap')).toHaveAttribute('data-loaded', 'true');
-  expect(requests.some((url) => /cubism|pixi|Wanko/i.test(url))).toBe(false);
+  const portrait = page.locator('#live2dPreview');
+  await expect(portrait).toBeVisible();
+  await expect.poll(() => portrait.evaluate((image) => image.complete && image.naturalWidth > 0)).toBe(true);
+  expect(requests.some((url) => /cubism|pixi|\/live2d\/Wanko/i.test(url))).toBe(false);
   await page.locator('[data-avatar="live2d"]').click();
   await expect(page.locator('.stage-wrap')).toHaveAttribute('data-loaded', 'true');
   await expect(page.locator('#stageLabel')).toHaveText('Wankoromochi');

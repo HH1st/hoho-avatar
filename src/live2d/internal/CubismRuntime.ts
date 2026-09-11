@@ -113,11 +113,15 @@ class CubismRuntime implements Live2DRuntime {
     }
   }
 
-  fit(width: number, height: number, scale: number): void {
+  fit(width: number, height: number, scale: number, center?: { x: number; y: number }): void {
     if (this.disposed || !this.model || !this.renderer) return;
     this.renderer.resize(width, height);
     this.model.scale.set(scale);
-    this.model.position.set(width / 2, height / 2);
+    const size = this.size;
+    this.model.position.set(
+      width / 2 + (size.width / 2 - (center?.x ?? size.width / 2)) * scale,
+      height / 2 + (size.height / 2 - (center?.y ?? size.height / 2)) * scale,
+    );
   }
 
   destroy(): void {
