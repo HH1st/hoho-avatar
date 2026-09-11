@@ -4,7 +4,7 @@ Live2D is a peer implementation of AvatarRenderer, using the same createAvatar, 
 
 ## Use the SDK
 
-Install the current local SDK tarball, pixi.js@6.5.10, pixi-live2d-display@0.4.0 and @pixi/unsafe-eval@6.5.10. These are optional peers: core/Canvas/Three.js consumers do not install or load them. Despite its name, @pixi/unsafe-eval is Pixi's official fallback for environments that forbid new Function. The Live2D entry can be imported on the server; browser dependencies load only when creating its renderer.
+Install @hh1st/hoho-avatar@next (0.1.0-beta.3), pixi.js@6.5.10, pixi-live2d-display@0.4.0 and @pixi/unsafe-eval@6.5.10. A local SDK tarball also works. These are optional peers: core/Canvas/Three.js consumers do not install or load them. Despite its name, @pixi/unsafe-eval is Pixi's official fallback for environments that forbid new Function. The Live2D entry can be imported on the server; browser dependencies load only when creating its renderer.
 
 ~~~ts
 import { createAvatar } from '@hh1st/hoho-avatar';

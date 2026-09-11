@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.1.0-beta.3 — 2026-09-11
+
 - Isolate Cubism/Pixi internals behind a private Live2D runtime port; retain the common SDK renderer contract and Demo behavior.
 - Add a Live2D renderer entry with optional PixiJS/Cubism display dependencies, shared state/mouth mapping and unified Studio selection. Core and model assets are not bundled.
 - Fix exception-safe audio teardown, cancellable avatar/file startup and renderer failure recovery through a shared error contract.

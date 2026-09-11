@@ -1,6 +1,6 @@
 # Three.js avatars
 
-The optional `@hh1st/hoho-avatar/three` entry renders a Blender GLB through Three.js, drives named mouth morph targets from the existing PCM classifier, and blinks automatically. This is an unreleased source feature. No SDK or site publication is required to try it locally.
+The optional `@hh1st/hoho-avatar/three` entry in `0.1.0-beta.3` renders a Blender GLB through Three.js, drives named mouth morph targets from the existing PCM classifier, and blinks automatically.
 
 ## Run the unified studio
 
@@ -28,7 +28,7 @@ The script saves the `.blend`, exports only the character to GLB, and renders a 
 
 ## SDK integration
 
-Build a local tarball with `npm pack`, then install that tarball and `three@^0.185.0` in your app. TypeScript consumers also need `@types/three`. Three.js is an optional peer; the core and Canvas entries do not load or require it.
+Install `@hh1st/hoho-avatar@next` and `three@^0.185.0` in your app, or build a local tarball with `npm pack`. TypeScript consumers also need `@types/three`. Three.js is an optional peer; the core and Canvas entries do not load or require it.
 
 ```ts
 import { createAvatar } from '@hh1st/hoho-avatar';

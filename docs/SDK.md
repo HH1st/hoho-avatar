@@ -1,6 +1,6 @@
 # SDK integration
 
-The SDK is framework-independent ESM with TypeScript declarations. The core entry has no renderer dependency, injects no UI or CSS, and does not connect to an AI service. Canvas and Three.js implement the same interface. Only the Three.js implementation requires its optional peer. Both use five heuristic mouth states; this is not phoneme-level lip sync.
+The SDK is framework-independent ESM with TypeScript declarations. The core entry has no renderer dependency, injects no UI or CSS, and does not connect to an AI service. Canvas, Three.js and Live2D implement the same interface. Three.js and Live2D require their optional peers. All use five heuristic mouth states; this is not phoneme-level lip sync.
 
 ## Install the preview
 
@@ -8,9 +8,9 @@ The SDK is framework-independent ESM with TypeScript declarations. The core entr
 npm install @hh1st/hoho-avatar@next --registry=https://registry.npmjs.org
 ```
 
-The API below is unreleased source. Use a local tarball to try it. Published beta.1 uses the earlier API; beta.2 registry publication is pending. Both renderer implementations now require explicit selection.
+The API below targets `0.1.0-beta.3`. Upgrading from beta.1 requires explicit renderer selection: replace `createAvatar(canvas, { character })` with `createAvatar(canvas, { renderer: canvasRenderer({ character }) })` and import `canvasRenderer` from `@hh1st/hoho-avatar/canvas`. Three.js and Live2D use the same factory with their corresponding renderer.
 
-For a local source build, run `npm install` and `npm pack` in the repository, then install `/path/to/hh1st-hoho-avatar-0.1.0-beta.2.tgz` in your application.
+For a local source build, run `npm install` and `npm pack` in the repository, then install `/path/to/hh1st-hoho-avatar-0.1.0-beta.3.tgz` in your application.
 
 ## First avatar
 

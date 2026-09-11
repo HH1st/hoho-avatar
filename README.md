@@ -14,11 +14,11 @@ _The redesigned Avatar Studio: a charcoal stage, coral accents, character cards,
 
 The project currently ships a browser-first TypeScript engine that analyzes streaming PCM audio, selects five mouth states, adds automatic blinking, and renders layered PNG characters with Canvas 2D. The demo accepts microphone input, a local audio file, locally generated English speech from KittenTTS, or an optional Azure Realtime voice-agent session. Local audio analysis, file decoding, and KittenTTS stay in the browser; Voice Agent mode explicitly sends microphone audio to the configured Azure OpenAI resource.
 
-An unreleased Three.js renderer and Blender-built 3D character are available in source: run `npm run dev` and select **Mochi (3D)** in the same Studio. See the [3D guide](docs/THREE.md). Live2D is also available through the same renderer interface; see [Live2D integration](docs/LIVE2D.md). Other engines remain roadmap items.
+The SDK includes optional Three.js and Live2D renderers through the same renderer interface. Run `npm run dev` and select **Mochi (3D)** in the same Studio to try the Blender-built 3D character. See the [3D guide](docs/THREE.md) and [Live2D integration](docs/LIVE2D.md). Other engines remain roadmap items.
 
 ## Use the SDK
 
-**`@hh1st/hoho-avatar`** is a framework-independent SDK with ESM, TypeScript declarations, no runtime dependencies, and an included original Pixel Bot character. Published beta.1 uses the earlier API. The source API below is unreleased and uses explicit renderer selection; install a local tarball to try it.
+**`@hh1st/hoho-avatar`** is a framework-independent SDK with ESM, TypeScript declarations, no required runtime dependencies, and an included original Pixel Bot character. Version `0.1.0-beta.3` adds explicit renderer selection with Canvas, Three.js and Live2D entries. Three.js and Live2D require their optional peers; Live2D Core and model assets are supplied separately.
 
 ```bash
 npm install @hh1st/hoho-avatar@next --registry=https://registry.npmjs.org
