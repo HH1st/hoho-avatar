@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Enable the Live2D sample on GitHub Pages using checksum-verified official assets, same-origin URLs, retained notices and production-browser smoke tests. SDK contents remain unchanged.
+
 ## 0.1.0-beta.3 — 2026-09-11
 
 - Isolate Cubism/Pixi internals behind a private Live2D runtime port; retain the common SDK renderer contract and Demo behavior.

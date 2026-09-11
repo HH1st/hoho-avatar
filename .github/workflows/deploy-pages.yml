@@ -29,7 +29,12 @@ jobs:
 
       - run: npm ci
       - run: npm run setup:demo
-      - run: npm run build
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm run setup:live2d-sample
+      - run: npm run build:pages
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:pages
 
       - uses: actions/configure-pages@v6
       - uses: actions/upload-pages-artifact@v5

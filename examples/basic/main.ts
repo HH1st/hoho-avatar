@@ -51,9 +51,11 @@ const configuredVoiceAgentUrl = import.meta.env.VITE_VOICE_AGENT_URL?.trim();
 const localVoiceAgentAvailable = import.meta.env.DEV;
 const voiceAgentAvailable = localVoiceAgentAvailable || Boolean(configuredVoiceAgentUrl);
 const hasLocalLive2D = import.meta.env.DEV && import.meta.env.HOHO_LIVE2D_SAMPLE === true;
-const live2dModelUrl = import.meta.env.VITE_LIVE2D_MODEL_URL?.trim() || (hasLocalLive2D ? '/__live2d/Wanko/Wanko.model3.json' : '');
-const live2dCoreUrl = import.meta.env.VITE_LIVE2D_CORE_URL?.trim() || (hasLocalLive2D ? '/__live2d/live2dcubismcore.min.js' : '');
-const live2dName = import.meta.env.VITE_LIVE2D_NAME?.trim() || (hasLocalLive2D ? 'Wankoromochi' : 'Live2D');
+const hasPagesLive2D = import.meta.env.HOHO_LIVE2D_PAGES === true;
+const sampleLive2DBase = hasPagesLive2D ? import.meta.env.BASE_URL + 'live2d/' : hasLocalLive2D ? '/__live2d/' : '';
+const live2dModelUrl = import.meta.env.VITE_LIVE2D_MODEL_URL?.trim() || (sampleLive2DBase ? sampleLive2DBase + 'Wanko/Wanko.model3.json' : '');
+const live2dCoreUrl = import.meta.env.VITE_LIVE2D_CORE_URL?.trim() || (sampleLive2DBase ? sampleLive2DBase + 'live2dcubismcore.min.js' : '');
+const live2dName = import.meta.env.VITE_LIVE2D_NAME?.trim() || (sampleLive2DBase ? 'Wankoromochi' : 'Live2D');
 
 const barElements = Array.from({ length: 32 }, () => {
   const bar = document.createElement("i");
@@ -175,7 +177,7 @@ async function mountSelectedAvatar(sampleRate: number, state: CharacterState, si
   stageLabel.textContent = selected.label;
   stageWrap.dataset.character = avatarSelect.value;
   stageWrap.dataset.renderer = selected.live2d ? 'live2d' : selected.model ? '3d' : '2d';
-  document.querySelector<HTMLElement>('#live2dCredit')!.hidden = !selected.live2d || !hasLocalLive2D || Boolean(import.meta.env.VITE_LIVE2D_MODEL_URL);
+  document.querySelector<HTMLElement>('#live2dCredit')!.hidden = !selected.live2d || !sampleLive2DBase || Boolean(import.meta.env.VITE_LIVE2D_MODEL_URL);
   syncCharacterChoices();
   const ready = stage.ensure(key, async () => {
     if (selected.live2d) return (await import('../../src/live2d')).live2dRenderer({ model: selected.live2d, coreUrl: live2dCoreUrl || undefined });

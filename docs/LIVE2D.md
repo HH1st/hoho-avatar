@@ -63,9 +63,20 @@ Values use model units and are clamped to parameter limits. Shared Thinking adds
 
 For your model set VITE_LIVE2D_MODEL_URL, VITE_LIVE2D_CORE_URL and optionally VITE_LIVE2D_NAME in .env.local; restart npm run dev. The Live2D card appears in the existing character picker and shares microphone/file/TTS/voice-agent controls. There is no separate page.
 
-For local development, npm run setup:live2d-sample downloads the official Wankoromochi sample and Core into ignored tmp/live2d-sample, together with their license references. Restart the dev server and select Wankoromochi. Only an explicit allowlist is served by the dev middleware; the fixture is never copied to public/, the production build or the SDK tarball. Delete tmp/live2d-sample to remove it.
+For local development, `npm run setup:live2d-sample` downloads the official Wankoromochi sample and Core into ignored `tmp/live2d-sample`, together with their license references. Runtime and model files are checked against pinned SHA-256 hashes. Restart the dev server and select **Wankoromochi**. Only an explicit allowlist is served by the dev middleware.
 
-The local sample is for development under Live2D's Free Material and individual sample terms, with the required credit shown in the Studio. The sample setup does not grant a commercial release license or redistribute the proprietary Core through this repository.
+The GitHub Pages demo includes this sample through a dedicated build:
+
+```bash
+npm run setup:live2d-sample
+npm run build:pages
+npm run test:pages
+npm --prefix examples/basic run preview
+```
+
+Open `/hoho-avatar/?character=live2d` on the preview server to select Wankoromochi directly. The build verifies the cached resources before copying them, unchanged, into `examples/basic/dist/live2d/`, alongside their license documents and source checksums. Core and model requests stay on the site's own origin and respect the `/hoho-avatar/` base path. Pixi/Cubism load only when Live2D is selected. The Pages workflow runs the production browser checks before deploying.
+
+The ordinary `npm run build` uses your configured model/Core URLs and does not include the sample. Neither build adds sample assets to `public/` or the SDK tarball. The official sample retains Live2D's Free Material and individual sample terms, with the required credit shown in the Studio. The setup command does not grant additional rights or a commercial release license.
 
 ## Licensing and verification
 
@@ -76,4 +87,4 @@ PixiJS and pixi-live2d-display have MIT licenses. Cubism Core, the embedded Cubi
 - https://www.live2d.com/eula/live2d-free-material-license-agreement_en.html
 - https://www.live2d.com/eula/live2d-sample-model-terms_en.html
 
-Run npm run typecheck, npm run lint and npm test. Actual Cubism browser tests in e2e/live2d.spec.mjs require the local sample and run with npm run test:e2e -- e2e/live2d.spec.mjs. Other CI tests run without proprietary assets. Physical device/browser GPU behavior remains a separate integration check.
+Run `npm run typecheck`, `npm run lint` and `npm test`. Actual Cubism browser tests in `e2e/live2d.spec.mjs` require the local sample and run with `npm run test:e2e -- e2e/live2d.spec.mjs`. After `npm run build:pages`, `npm run test:pages` verifies the production resources, attribution, lazy loading and shared audio controls. Install Chromium with `npx playwright install chromium` before running browser tests. Physical device/browser GPU behavior remains a separate integration check.

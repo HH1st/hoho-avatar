@@ -338,5 +338,6 @@ h1 > span { color: #ffb09c; font-family: Georgia, 'Times New Roman', serif; font
 .mochi-icon { width: 32px; height: 30px; border: 4px solid #df9978; border-radius: 9px; background: #f4ebd8; text-align: center; font-size: 14px; letter-spacing: 3px; line-height: 11px; padding-left: 3px; }
 .mochi-icon small { margin: 0; color: #35423e; line-height: 8px; letter-spacing: 0; }
 .character-list { grid-template-columns: repeat(auto-fit, minmax(125px, 1fr)); }
+@media(min-width:851px) { .character-list { grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); } }
 @media(max-width:850px) { .model-tools { order: 3; width: 100%; } .stage-wrap[data-renderer='3d'] #avatar { top: 8px; height: calc(100% - 16px); } }
 @media(max-width:850px) { .stage-wrap[data-renderer='live2d'] #avatar { top: 8px; height: calc(100% - 16px); } .live2d-credit { order: 4; } }

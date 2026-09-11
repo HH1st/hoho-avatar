@@ -11,7 +11,10 @@ export default defineConfig(({ mode }) => {
   return {
     root,
     plugins: [live2dSamplePlugin()],
-    define: { 'import.meta.env.HOHO_LIVE2D_SAMPLE': JSON.stringify(hasLive2DSample) },
+    define: {
+      'import.meta.env.HOHO_LIVE2D_SAMPLE': JSON.stringify(hasLive2DSample),
+      'import.meta.env.HOHO_LIVE2D_PAGES': JSON.stringify(mode === 'pages'),
+    },
     base: "/hoho-avatar/",
     envDir: repository,
     // One studio exercises the checked-out SDK with either renderer.

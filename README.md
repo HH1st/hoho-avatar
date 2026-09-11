@@ -60,7 +60,7 @@ npm run dev
 
 Open the URL shown by Vite and press **Try a sample**. Everything runs locally in the browser.
 
-The single Studio in `examples/basic/` imports the checked-out SDK source. Select a 2D character or **Mochi (3D)** in the same character library; microphone, files, TTS and voice conversations share the same controls. Three.js is loaded only when selecting a 3D character. GitHub Pages builds this same Studio. Run `npm run setup:quickstart` to build and install the current tarball in the isolated quickstart.
+The single Studio in `examples/basic/` imports the checked-out SDK source. Select a 2D character, **Mochi (3D)** or **Wankoromochi (Live2D)** in the same character library; microphone, files, TTS and voice conversations share the same controls. Three.js and Live2D load only when selected. Run `npm run setup:live2d-sample` and restart the dev server to enable Wankoromochi locally. GitHub Pages includes the official sample through `npm run build:pages`; see the [Live2D guide](docs/LIVE2D.md). Run `npm run setup:quickstart` to build and install the current tarball in the isolated quickstart.
 
 ## Built for voice agents
 
@@ -301,11 +301,14 @@ Image generation also requires an ImageGen capability when a character body does
 
 ```bash
 npm run setup:demo # Install the demo dependencies from its lockfile
-npm run dev        # Start the unified 2D/3D Studio from source
+npm run dev        # Start the unified Canvas/Three.js/Live2D Studio from source
 npm run typecheck  # Type-check source, examples, and tests
 npm run lint       # Check JS/TS correctness with Oxlint
 npm test           # Run deterministic engine and audio-player tests
 npm run build      # Build the demo into examples/basic/dist
+npm run setup:live2d-sample # Download and verify official Live2D sample assets
+npm run build:pages # Build the demo with the Live2D sample and license notices
+npm run test:pages  # Check the production Pages build in Chromium
 npm run build:sdk  # Build SDK ESM, declarations and assets
 npm run test:package # Install and test the SDK tarball in an independent app
 ```

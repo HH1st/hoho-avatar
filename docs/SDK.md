@@ -158,8 +158,8 @@ Do not construct the avatar during server rendering. Importing the package on th
 
 ## Validation and release
 
-The single Studio in `examples/basic/` imports local SDK source for both renderers. The separate SDK quickstart is a package-consumer fixture used to verify native browser and bundler integration.
+The single Studio in `examples/basic/` imports local SDK source for Canvas, Three.js and Live2D. The separate SDK quickstart is a package-consumer fixture used to verify native browser and bundler integration.
 
-Run `npm run setup:demo` after installing repository dependencies. `npm run dev`, `npm run dev:all`, and `npm run build` use the checked-out SDK; the only Studio output is `examples/basic/dist/`. GitHub Pages builds the same source and supports both character types. `npm run build:sdk` and `npm pack` remain separate SDK distribution commands.
+Run `npm run setup:demo` after installing repository dependencies. `npm run dev`, `npm run dev:all`, and `npm run build` use the checked-out SDK; the only Studio output is `examples/basic/dist/`. GitHub Pages runs `npm run setup:live2d-sample` and `npm run build:pages` to include the official Live2D sample, Core and license notices, then verifies the result with `npm run test:pages`. `npm run build:sdk` and `npm pack` remain separate SDK distribution commands and exclude these assets.
 
 `npm run test:package` builds and inspects the tarball, installs it into a fresh consumer, checks NodeNext types and server-side import, then runs native ESM and Vite production browser checks for character loading, audio-worklet PCM, microphone capture and disposal. See [RELEASING.md](https://github.com/HH1st/hoho-avatar/blob/main/docs/RELEASING.md) before publishing.
