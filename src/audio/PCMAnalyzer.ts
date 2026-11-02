@@ -23,7 +23,7 @@ export class PCMAnalyzer {
     const result: AudioFeatures[] = [];
     for (let i = 0; i < data.length; i += 1) {
       const raw = data[i] ?? 0;
-      this.pending[this.pendingLength] = data instanceof Int16Array ? raw / 32768 : Math.max(-1, Math.min(1, raw));
+      this.pending[this.pendingLength] = data instanceof Int16Array ? raw / 32768 : Number.isNaN(raw) ? 0 : Math.max(-1, Math.min(1, raw));
       this.pendingLength += 1;
       if (this.pendingLength === this.windowSize) {
         const windowTimestamp = timestamp + result.length * (this.windowSize / this.sampleRate) * 1000;
