@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { MouthClassifier } from "../src/audio/MouthClassifier";
 import { PCMAnalyzer } from "../src/audio/PCMAnalyzer";
 
 describe("PCMAnalyzer", () => {
@@ -17,6 +18,18 @@ describe("PCMAnalyzer", () => {
     const [features] = analyzer.push(new Int16Array([32767, -32768]), 10);
     expect(features?.rms).toBeCloseTo(1, 3);
     expect(features?.peak).toBeCloseTo(1, 3);
+  });
+
+  it("treats NaN Float32 samples as silence instead of poisoning the window", () => {
+    const analyzer = new PCMAnalyzer({ sampleRate: 1000, windowMs: 10 });
+    const chunk = new Float32Array(10).fill(0.3);
+    chunk[4] = NaN;
+    const [features] = analyzer.push(chunk, 0);
+    expect(Number.isFinite(features?.rms)).toBe(true);
+    expect(Number.isFinite(features?.peak)).toBe(true);
+    expect(features?.peak).toBeCloseTo(0.3, 5);
+    const frame = new MouthClassifier().update(features!);
+    expect(Number.isFinite(frame.energy)).toBe(true);
   });
 
   it("returns zero energy for silence", () => {
